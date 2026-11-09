@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-09",
+  "source_files_parsed": 43,
+  "synthetic_model_rows": 1000,
+  "maximum_absolute_error": 6.556510925292969e-07,
+  "tolerance": 2e-06,
+  "numpy": "2.4.6",
+  "python": "3.11",
+  "rendered_files": 25,
+  "sensitive_marker_scan": "passed",
+  "robot_connected": false,
+  "motion_started": false,
+  "limits": "Local Python3 verification;does not replace ROS Python2.7 target verification"
+}

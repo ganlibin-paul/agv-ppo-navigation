@@ -1,0 +1,15 @@
+[program:amr_ppo_shadow]
+command=/bin/bash -c "source /opt/ros/melodic/setup.bash; source /root/ros_workspaces/ros_ws/install/setup.bash; exec python /opt/agv-ppo-navigation/runtime/run_agv.py --model-directory /opt/agv-ppo-navigation/models/v35 --directory /var/log/amr-ppo --front-x-candidate 0.45"
+directory=/opt/agv-ppo-navigation
+autostart=false
+autorestart=false
+startsecs=5
+stopsignal=TERM
+stopasgroup=true
+stopwaitsecs=60
+stdout_logfile=/var/log/amr-ppo/stdout.log
+stdout_logfile_maxbytes=1000000
+stdout_logfile_backups=2
+stderr_logfile=/var/log/amr-ppo/stderr.log
+stderr_logfile_maxbytes=1000000
+stderr_logfile_backups=2

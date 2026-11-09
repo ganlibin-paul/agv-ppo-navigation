@@ -1,0 +1,89 @@
+"""Candidate dual-lidar configuration, transforms, and fusion for simulation.
+
+Raw angular grids and TF were rechecked on the stationary robot on 2026-11-02.
+Floor fusion is supported by recorded scan comparisons; timing alignment remains approximate. No ROS or hardware access; all points are base-frame.
+"""
+import math
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class ScanGeometry:
+    frame_id: str
+    n_rays: int
+    angle_min: float
+    angle_increment: float
+    range_min: float
+    range_max: float
+    x: float
+    y: float
+    z: float
+    yaw: float
+    evidence: str
+
+    @property
+    def angle_max(self):
+        # Last sampled angle, not an inferred step from rounded endpoint metadata.
+        return self.angle_min+(self.n_rays-1)*self.angle_increment
+
+
+FRONT=ScanGeometry('laser_link',1440,-3.1415927410125732,.004363323096185923,0.0,100.,.5378329,-.004740062,.22,-.020607,'raw metadata and live TF checked 2026-11-02')
+BACK=ScanGeometry('laser_link_back',1440,-3.1415927410125732,.004363323096185923,0.0,100.,-.525,0.,.22,math.pi,'raw metadata and live TF checked 2026-11-02')
+MERGED_N=1083
+MERGED_MIN=-3.14
+MERGED_MAX=3.14
+MERGED_INC=.0058
+RANGE_MIN=.05
+RANGE_MAX=50.
+SENTINEL=51.
+
+
+def world_pose_xy(base_pose, x, y):
+    bx,by,th=base_pose
+    return (bx+math.cos(th)*x-math.sin(th)*y,by+math.sin(th)*x+math.cos(th)*y)
+
+
+def world_point_to_base(base_pose, point):
+    bx,by,th=base_pose; x,y=point; dx=x-bx; dy=y-by
+    return (math.cos(th)*dx+math.sin(th)*dy,-math.sin(th)*dx+math.cos(th)*dy)
+
+
+def sensor_ray(geometry, i, base_pose=(0.,0.,0.)):
+    if i<0 or i>=geometry.n_rays: raise IndexError(i)
+    local_angle=geometry.angle_min+i*geometry.angle_increment
+    angle=base_pose[2]+geometry.yaw+local_angle
+    x,y=world_pose_xy(base_pose,geometry.x,geometry.y)
+    return (x,y,geometry.z),(math.cos(angle),math.sin(angle),0.)
+
+
+def merge_hits(points):
+    """Merge world-independent base-frame hits with floor-angle bin supported by stationary real scan replay.
+
+    Min and max metadata match snapshot. Final center angle is 3.1356, not
+    reported angle_max 3.14: endpoint/count/increment are not all consistent.
+    """
+    values=[SENTINEL]*MERGED_N
+    for x,y in points:
+        if not math.isfinite(x) or not math.isfinite(y): continue
+        distance=math.hypot(x,y)
+        if not RANGE_MIN<=distance<=RANGE_MAX: continue
+        angle=math.atan2(y,x)
+        if angle<MERGED_MIN or angle>MERGED_MAX: continue
+        index=int(math.floor((angle-MERGED_MIN)/MERGED_INC))
+        if 0<=index<MERGED_N: values[index]=min(values[index],distance)
+    return values
+
+
+def validity(ranges):
+    if len(ranges)!=MERGED_N: raise ValueError('expected 1083 values')
+    return [math.isfinite(v) and RANGE_MIN<=v<=RANGE_MAX and abs(v-SENTINEL)>1e-6 for v in ranges]
+
+
+def sectors(ranges,n=72):
+    mask=validity(ranges); output=[None]*n
+    for i,(r,ok) in enumerate(zip(ranges,mask)):
+        if ok:
+            a=MERGED_MIN+i*MERGED_INC
+            idx=min(n-1,max(0,int((a-MERGED_MIN)/(MERGED_MAX-MERGED_MIN)*n)))
+            output[idx]=r if output[idx] is None else min(r,output[idx])
+    return output

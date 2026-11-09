@@ -1,0 +1,44 @@
+"""V87 full-route potential, with all-obstacle physical clearance supplied by Isaac."""
+import math
+from dataclasses import dataclass
+@dataclass
+class RewardState:
+    hold_seconds: float=0.
+    still_seconds: float=0.
+    best_route_distance: float=float("inf")
+    no_progress_seconds: float=0.
+
+def route_distance(x,y,goal,obstacle):
+    # A common potential for one or three obstacles; physical contact/clearance covers all.
+    return math.hypot(x-goal[0],y-goal[1])
+def transition_reward(previous,current,previous_action,action,*,goal,clearance,contact,state,obstacle,dt=.1,timeout=False):
+    x,y,yaw,v,w=current;distance=math.hypot(x-goal[0],y-goal[1])
+    heading=abs(math.atan2(math.sin(yaw-goal[2]),math.cos(yaw-goal[2])))
+    if contact or clearance<=0:return -150.,'collision',{'collision':-150.}
+    arrived=distance<=.1 and heading<=math.radians(10) and abs(v)<=.02 and abs(w)<=.03
+    state.hold_seconds=state.hold_seconds+dt if arrived else 0.
+    if state.hold_seconds>=1.-1e-9:return 120.,'goal',{'goal':120.}
+    state.still_seconds=state.still_seconds+dt if abs(v)<.015 and abs(w)<.03 and distance>.15 else 0.
+    terms={'route_progress':8*(route_distance(*previous[:2],goal,obstacle)-route_distance(x,y,goal,obstacle)),
+           'time':-.2*dt,'clearance':-dt*max(0.,(.25-clearance)/.25)**2,
+           'smoothness':-.01*sum((a-b)**2 for a,b in zip(action,previous_action)),
+           'idle':-.1 if state.still_seconds>3 else 0.,
+           'boundary':-.2*dt*max(0.,(abs(y)-1.2)/.3)**2,
+           'heading':-.2*dt*(1-math.cos(heading))*max(0.,1-distance/.5)}
+    # Task-local watchdog: physical turning alone is not route progress.
+    # Twenty seconds allows the measured turns in this audited route.
+    remaining=route_distance(x,y,goal,obstacle)
+    if not math.isfinite(state.best_route_distance):
+        state.best_route_distance=route_distance(*previous[:2],goal,obstacle)
+    if arrived:
+        state.no_progress_seconds=0.
+    elif remaining<state.best_route_distance-.01:
+        state.best_route_distance=remaining;state.no_progress_seconds=0.
+    else:
+        state.no_progress_seconds+=dt
+    terms['progress_stagnation']=-.2*dt*min(max(state.no_progress_seconds-3.,0.)/3.,3.)
+    if state.no_progress_seconds>=20.-1e-9:
+        terms['no_progress']=-50.;return sum(terms.values()),'no_progress',terms
+    if state.still_seconds>=20:terms['stalled']=-50.;return sum(terms.values()),'stalled',terms
+    if timeout:terms['timeout']=-50.
+    return sum(terms.values()),'timeout' if timeout else 'running',terms

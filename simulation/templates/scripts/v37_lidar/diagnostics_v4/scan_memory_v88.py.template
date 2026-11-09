@@ -1,0 +1,31 @@
+"""Scan memory with free-space clearing from original sensor rays, not merged bins.
+Unknown rays and occlusion retain history. No timeout erases hidden static obstacles.
+"""
+import math
+import numpy as np
+from scan_memory_base_v88 import ScanObstacleMemory as StaticScanMemory
+
+class ScanObstacleMemory(StaticScanMemory):
+    def update(self, pose, ranges, raw_scans=()):
+        removed=np.zeros(len(self.points),dtype=bool)
+        if len(self.points) and raw_scans:
+            c,s=math.cos(pose[2]),math.sin(pose[2])
+            delta=self.points-np.asarray(pose[:2])
+            base=np.column_stack((c*delta[:,0]+s*delta[:,1],-s*delta[:,0]+c*delta[:,1]))
+            for raw in raw_scans:
+                ox,oy,yaw=raw['origin']
+                d=base-[ox,oy];distance=np.hypot(d[:,0],d[:,1])
+                bearing=np.arctan2(d[:,1],d[:,0])-yaw
+                bearing=np.arctan2(np.sin(bearing),np.cos(bearing))
+                scan=np.asarray([np.nan if r is None else r for r in raw['ranges']],dtype=float)
+                scan[~np.isfinite(scan)]=0.
+                index=np.floor((bearing-raw['angle_min'])/raw['angle_increment']).astype(int)
+                # Full 360-degree raw grid; inspect both sides of the bearing.
+                indices=(index[:,None]+np.arange(-6,8)[None,:])%len(scan)
+                samples=scan[indices]
+                valid=np.isfinite(samples)&(samples>max(0.,raw['range_min']))&(samples<=raw['range_max'])
+                # Only farther valid returns establish free space; missing returns do not.
+                removed|=np.all(valid&(samples>distance[:,None]+.10),axis=1)
+        self.last_cleared=int(removed.sum())
+        self.points=self.points[~removed]
+        return StaticScanMemory.update(self,pose,ranges)

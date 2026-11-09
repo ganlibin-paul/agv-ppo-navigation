@@ -1,0 +1,45 @@
+# -*- coding: utf-8 -*-
+"""Fixed checkpoint codec: Python 2.7/3 + NumPy, no ROS/simulator defaults."""
+import numpy as np
+
+
+class InputBridge(object):
+    def __init__(self):
+        self.angles = -3.14 + np.arange(1083) * .0058
+        self._bins = np.clip(np.floor((self.angles + 3.14) /
+                             (6.28 + 1e-12) * 72).astype(int), 0, 71)
+        self.reset()
+
+    def reset(self):
+        self._hist = []
+
+    def push_action(self, action):
+        self._hist.extend([float(action[0]), float(action[1])])
+        self._hist = self._hist[-4:]
+
+    def encode(self, ranges, e_y, e_psi, kappa, ld, progress, direction,
+               v_ref, w_ref, v_meas, w_meas, stamp_skew):
+        r = np.asarray(ranges, dtype=float)
+        if r.shape != (1083,):
+            raise ValueError('expected 1083 base_footprint ranges')
+        valid = np.isfinite(r) & (r >= .05) & (r <= 50.)
+        valid &= np.abs(r - 51.) > 1e-6
+        distance = np.full(72, np.inf)
+        np.minimum.at(distance, self._bins[valid], r[valid])
+        mask = (np.bincount(self._bins[valid], minlength=72) > 0).astype(float)
+        normalized = np.clip(np.where(mask > 0, distance / 3., 1.), 0., 1.)
+        if valid.any():
+            closest = int(np.argmin(np.where(valid, r, np.inf)))
+            d_min, bearing = float(r[closest]), float(self.angles[closest])
+        else:
+            d_min, bearing = 50., 0.
+        radar = [float(valid.sum()) / 1083., np.clip(d_min / 3., 0., 1.),
+                 np.sin(bearing), np.cos(bearing)]
+        path = [np.clip(e_y / 1.5, -1., 1.), np.sin(e_psi), np.cos(e_psi),
+                np.clip(kappa / 2., -1., 1.), np.clip(ld / 1.2, 0., 1.),
+                np.clip(progress, 0., 1.), float(1 - 2 * direction)]
+        state = [np.clip(v_ref / 1.5, -1., 1.), np.clip(w_ref / .58, -1., 1.),
+                 np.clip(v_meas / 1.5, -1., 1.), np.clip(w_meas / .58, -1., 1.),
+                 np.clip(stamp_skew / .5, 0., 1.)]
+        history = [0.] * (4 - len(self._hist)) + self._hist
+        return np.concatenate([normalized, mask, radar, path, state, history]).astype(np.float32)

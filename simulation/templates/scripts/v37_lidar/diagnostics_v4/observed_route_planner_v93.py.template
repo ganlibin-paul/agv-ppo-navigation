@@ -1,0 +1,124 @@
+"""Observed-space route hypotheses; complete rectangle sweeps, no scene truth input."""
+import itertools
+import math
+import time
+import numpy as np
+
+
+class ObservedRoutePlanner(object):
+    def __init__(self):
+        self.margin=.24
+        self.status='NOT_PLANNED'
+        self.last_slice_seconds=0.;self.max_slice_seconds=0.;self.elapsed=0.;self.expansions=0
+        self.choice=None;self.cost=None;self.candidate_results=[]
+
+    def start(self,pose,raw_scans,points_base,endpoint,observed_views=()):
+        self.status='PLANNING';self.elapsed=0.;self.expansions=0
+        self.choice=None;self.cost=None;self.candidate_results=[]
+        self._job=self._search(tuple(pose),raw_scans,np.asarray(points_base),float(endpoint),observed_views)
+
+    def advance(self):
+        started=time.perf_counter();result=next(self._job)
+        self.last_slice_seconds=time.perf_counter()-started;self.elapsed+=self.last_slice_seconds
+        self.max_slice_seconds=max(self.max_slice_seconds,self.last_slice_seconds)
+        if result is not None:self._job.close();self._job=None
+        return result
+
+    def _search(self,pose,raw_scans,points_base,endpoint,observed_views):
+        x0,y0,yaw0=pose;c,s=math.cos(yaw0),math.sin(yaw0)
+        horizon=9.;resolution=.1;xmax=min(endpoint+.6,x0+horizon)
+        origin=np.array([x0-1.3,-2.5]);shape=np.array([int(math.ceil((xmax-origin[0])/resolution))+1,51])
+        free=np.zeros(tuple(shape),bool)
+        observed=[np.column_stack((x0+c*points_base[:,0]-s*points_base[:,1],y0+s*points_base[:,0]+c*points_base[:,1]))]
+        views=[(pose,raw_scans)]+list(observed_views)
+        for view_index,(view_pose,view_scans) in enumerate(views):
+            vx,vy,va=view_pose;vc,vs=math.cos(va),math.sin(va)
+            for raw in view_scans:
+                scan=np.asarray([np.nan if q is None else q for q in raw['ranges']],float)
+                ids=np.flatnonzero(np.isfinite(scan)&(scan>raw['range_min'])&(scan<=raw['range_max']))
+                ox,oy,heading=raw['origin'];ox,oy=vx+vc*ox-vs*oy,vy+vs*ox+vc*oy
+                angles=va+heading+raw['angle_min']+ids*raw['angle_increment'];dist=scan[ids]
+                near=dist<=horizon
+                if view_index==0:observed.append(np.column_stack((ox+dist[near]*np.cos(angles[near]),oy+dist[near]*np.sin(angles[near]))))
+                ticks=np.arange(.025,horizon+.001,.05)
+                valid=ticks[None,:]<np.minimum(dist[:,None]-.025,horizon)
+                xx=ox+np.cos(angles[:,None])*ticks;yy=oy+np.sin(angles[:,None])*ticks
+                cells=np.floor((np.column_stack((xx[valid],yy[valid]))-origin)/resolution).astype(int)
+                inside=(cells>=0).all(axis=1)&(cells<shape).all(axis=1);cells=cells[inside]
+                free[cells[:,0],cells[:,1]]=True
+                yield None
+        # Rasterize every cell intersecting the rotated ego rectangle, not sparse interior samples.
+        ii,jj=np.meshgrid(np.arange(shape[0]),np.arange(shape[1]),indexing='ij')
+        gx=origin[0]+(ii+.5)*resolution-(x0+.0125*c);gy=origin[1]+(jj+.5)*resolution-(y0+.0125*s)
+        half=.5*resolution
+        ego_cells=(np.abs(c*gx+s*gy)<=.4875+half*(abs(c)+abs(s)))&(np.abs(-s*gx+c*gy)<=.3515+half*(abs(c)+abs(s)))
+        ego_cells&=(np.abs(gx)<=.4875*abs(c)+.3515*abs(s)+half)&(np.abs(gy)<=.4875*abs(s)+.3515*abs(c)+half)
+        free|=ego_cells
+        points=np.concatenate(observed)
+        keep=(points[:,0]>=x0-1.2)&(points[:,0]<=xmax+.6)&(np.abs(points[:,1])<2.5);points=points[keep]
+        if not len(points):
+            self.status='INSUFFICIENT_OBSERVATION';yield [];return
+        cells=np.floor(points/.025).astype(int);_,ids=np.unique(cells,axis=0,return_index=True);points=points[ids]
+        target=min(endpoint,x0+horizon-.65)
+        central=points[(points[:,0]>x0+.7)&(points[:,0]<target-.8)&(np.abs(points[:,1])<1.15)]
+        central=central[np.argsort(central[:,0])]
+        groups=[]
+        if len(central):
+            cuts=np.r_[0,np.flatnonzero(np.diff(central[:,0])>.55)+1,len(central)]
+            for lo,hi in zip(cuts[:-1],cuts[1:]):
+                q=central[lo:hi]
+                if len(q)>=3:groups.append((float((q[0,0]+q[-1,0])/2),float(q[:,1].min()),float(q[:,1].max())))
+            groups=groups[:3]
+        self.observed_groups=groups
+        body=np.array([(a,b) for a in np.linspace(-.475,.5,6) for b in np.linspace(-.3515,.3515,5)])
+        best=None;best_cost=float('inf');best_choice=None
+        patterns=list(itertools.product([-1.,1.],repeat=len(groups)))
+        for required_margin in (self.margin,.21):
+            for pattern,room in [(None,0.)]+list(itertools.product(patterns,[.25,.35,.45])):
+                if pattern is None:
+                    xx=np.linspace(x0,min(x0+1.2,endpoint),25)
+                    poses=np.column_stack((xx,y0+(xx-x0)*math.tan(yaw0),np.full(len(xx),yaw0),np.zeros(len(xx))))
+                else:
+                    knots=[(x0,y0)]+[(q[0],q[2]+.3515+room if side>0 else q[1]-.3515-room) for q,side in zip(groups,pattern)]+[(target,0.)]
+                    poses=[]
+                    for index,((xa,ya),(xb,yb)) in enumerate(zip(knots[:-1],knots[1:])):
+                        length=xb-xa
+                        t=np.linspace(0.,1.,max(3,int(math.ceil(length/.05))+1))
+                        m0=math.tan(yaw0) if index==0 else 0.
+                        yy=(2*t**3-3*t**2+1)*ya+(t**3-2*t**2+t)*length*m0+(-2*t**3+3*t**2)*yb
+                        derivative=((6*t*t-6*t)*ya+(3*t*t-4*t+1)*length*m0+(-6*t*t+6*t)*yb)/length
+                        second=((12*t-6)*ya+(6*t-4)*length*m0+(-12*t+6)*yb)/(length*length)
+                        segment=np.column_stack((xa+t*length,yy,np.arctan(derivative),second/(1+derivative**2)**1.5))
+                        poses.extend(segment[:-1].tolist())
+                    poses.append(segment[-1].tolist());poses=np.asarray(poses)
+                accepted=[];minimum=float('inf');rejection='end'
+                for start in range(0,len(poses),16):
+                    q=poses[start:start+16];cs=np.cos(q[:,2]);sn=np.sin(q[:,2]);dx=points[None,:,0]-q[:,None,0];dy=points[None,:,1]-q[:,None,1]
+                    lx=cs[:,None]*dx+sn[:,None]*dy;ly=-sn[:,None]*dx+cs[:,None]*dy
+                    qx=np.maximum(-.475-lx,lx-.5);qy=np.abs(ly)-.3515
+                    gaps=(np.hypot(np.maximum(qx,0.),np.maximum(qy,0.))+np.minimum(np.maximum(qx,qy),0.)).min(axis=1)
+                    fx=q[:,None,0]+cs[:,None]*body[None,:,0]-sn[:,None]*body[None,:,1];fy=q[:,None,1]+sn[:,None]*body[None,:,0]+cs[:,None]*body[None,:,1]
+                    cells=np.floor((np.stack((fx,fy),axis=-1)-origin)/resolution).astype(int)
+                    in_grid=(cells>=0).all(axis=2)&(cells<shape).all(axis=2)
+                    clipped=np.clip(cells,[0,0],shape-1)
+                    own_dx=fx-x0;own_dy=fy-y0;own_x=c*own_dx+s*own_dy;own_y=-s*own_dx+c*own_dy
+                    # The occupied ego footprint is known at the start, including its rotated boundary.
+                    in_ego=(own_x>=-.475-1e-9)&(own_x<=.5+1e-9)&(np.abs(own_y)<=.3515+1e-9)
+                    known=((in_grid&free[clipped[:,:,0],clipped[:,:,1]])|in_ego).all(axis=1)
+                    valid=(gaps>=required_margin)&known&(np.abs(q[:,1])<2.)
+                    bad=np.flatnonzero(~valid);n=int(bad[0]) if len(bad) else len(q)
+                    accepted.extend(q[:n].tolist())
+                    if n:minimum=min(minimum,float(gaps[:n].min()))
+                    if len(bad):rejection='collision_margin' if gaps[n]<self.margin else 'unknown_space';break
+                self.expansions+=1
+                if len(accepted)>1:
+                    path=np.asarray(accepted);advance=path[-1,0]-x0
+                    length=float(np.linalg.norm(np.diff(path[:,:2],axis=0),axis=1).sum());turning=float(np.abs(np.diff(path[:,2])).sum())
+                    cost=-10.*advance+length+.25*turning+.04/(minimum-.19)
+                    if advance>.45 and cost<best_cost:
+                        best=path;best_cost=cost;best_choice=dict(sides=([] if pattern is None else list(pattern)),room=room,kind='observe_forward' if pattern is None else 'S' if len(set(pattern))>1 else ('outer_left' if pattern and pattern[0]>0 else 'outer_right' if pattern else 'direct'),minimum_predicted_clearance=minimum,verified_advance=advance,planning_margin=required_margin)
+                self.candidate_results.append(dict(sides=([] if pattern is None else list(pattern)),room=room,required_margin=required_margin,verified_points=len(accepted),rejection=rejection,rejected_pose=q[n].tolist() if len(bad) else None,missing_points=np.column_stack((fx[n],fy[n]))[~((in_grid[n]&free[clipped[n,:,0],clipped[n,:,1]])|in_ego[n])].tolist() if len(bad) else []))
+                yield None
+            if best is not None:break
+        if best is None:self.status='NO_OBSERVED_FORWARD_ROUTE';yield [];return
+        self.choice=best_choice;self.cost=best_cost;self.status='PATH_FOUND';yield best.tolist()

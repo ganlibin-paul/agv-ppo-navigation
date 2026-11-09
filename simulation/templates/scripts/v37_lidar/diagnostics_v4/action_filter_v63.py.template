@@ -1,0 +1,11 @@
+"""Smooth only proposed angular residuals; collision projection remains downstream."""
+import numpy as np
+
+class AngularActionFilter(object):
+    def __init__(self):self.value=0.
+    def reset(self):self.value=0.
+    def apply(self,action):
+        result=np.asarray(action,dtype=float).copy()
+        self.value=.75*self.value+.25*result[1]
+        result[1]=self.value
+        return result

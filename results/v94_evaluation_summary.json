@@ -1,0 +1,2172 @@
+{
+  "training_steps": 262144,
+  "training_seconds": 24470.799201680988,
+  "completed": 64,
+  "successes": 23,
+  "validated": 23,
+  "episodes_with_contact": 0,
+  "three_box": {
+    "tested": 40,
+    "success": 12
+  },
+  "reports": [
+    {
+      "name": "S_only_gap_2.0_left_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.55,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.9999999999999996,
+        1.9999999999999996
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22512504975371694,
+      "minimum_wall_clearance_m": 0.6361296464416972,
+      "actual_weave": false,
+      "sim_seconds": 67.2
+    },
+    {
+      "name": "S_only_gap_2.0_right_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.55,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.85,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.9999999999999996,
+        1.9999999999999996
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21238045941514447,
+      "minimum_wall_clearance_m": 0.5960860101775993,
+      "actual_weave": false,
+      "sim_seconds": 111.80000000000001
+    },
+    {
+      "name": "S_only_gap_2.5_left_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 10.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        2.5000000000000004,
+        2.4999999999999987
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22142907555278563,
+      "minimum_wall_clearance_m": 0.7418437682219043,
+      "actual_weave": true,
+      "sim_seconds": 102.2
+    },
+    {
+      "name": "S_only_gap_2.5_right_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 10.85,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        2.5000000000000004,
+        2.4999999999999987
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21032190831043213,
+      "minimum_wall_clearance_m": 0.5891311277280553,
+      "actual_weave": true,
+      "sim_seconds": 136.3
+    },
+    {
+      "name": "S_only_gap_3.0_left_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.55,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 11.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.0000000000000004,
+        2.9999999999999987
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21921361180186708,
+      "minimum_wall_clearance_m": 0.7680320490706571,
+      "actual_weave": true,
+      "sim_seconds": 96.9
+    },
+    {
+      "name": "S_only_gap_3.0_right_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.55,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 11.85,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.0000000000000004,
+        2.9999999999999987
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21039624459010736,
+      "minimum_wall_clearance_m": 0.8516474033506353,
+      "actual_weave": true,
+      "sim_seconds": 113.4
+    },
+    {
+      "name": "S_only_gap_3.5_left_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.05,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 12.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.5000000000000004,
+        3.4999999999999987
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22321419729225248,
+      "minimum_wall_clearance_m": 0.7870504930603657,
+      "actual_weave": true,
+      "sim_seconds": 101.4
+    },
+    {
+      "name": "S_only_gap_3.5_right_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.05,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 12.85,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.5000000000000004,
+        3.4999999999999987
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21043402477105264,
+      "minimum_wall_clearance_m": 0.8486277090893164,
+      "actual_weave": true,
+      "sim_seconds": 120.7
+    },
+    {
+      "name": "both_options_gap_1.5_left_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.4999999999999996,
+        1.4999999999999996
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22953878699190333,
+      "minimum_wall_clearance_m": 0.30020314885543065,
+      "actual_weave": false,
+      "sim_seconds": 56.800000000000004
+    },
+    {
+      "name": "both_options_gap_1.5_right_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.05,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.85,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.4999999999999996,
+        1.4999999999999996
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20376945283057696,
+      "minimum_wall_clearance_m": 0.4187942476110098,
+      "actual_weave": false,
+      "sim_seconds": 86.9
+    },
+    {
+      "name": "both_options_gap_2.5_left_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 10.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        2.5000000000000004,
+        2.4999999999999987
+      ],
+      "result": "stalled",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21369684742244152,
+      "minimum_wall_clearance_m": 0.40353595577425816,
+      "actual_weave": false,
+      "sim_seconds": 81.2
+    },
+    {
+      "name": "both_options_gap_2.5_right_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 10.85,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        2.5000000000000004,
+        2.4999999999999987
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20488890465244933,
+      "minimum_wall_clearance_m": 0.4241673018342078,
+      "actual_weave": false,
+      "sim_seconds": 97.4
+    },
+    {
+      "name": "both_options_gap_3.5_left_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 12.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.5000000000000004,
+        3.4999999999999987
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21946260857142977,
+      "minimum_wall_clearance_m": 0.38552082354758377,
+      "actual_weave": false,
+      "sim_seconds": 87.10000000000001
+    },
+    {
+      "name": "both_options_gap_3.5_right_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.05,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 12.85,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.5000000000000004,
+        3.4999999999999987
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2035493334638043,
+      "minimum_wall_clearance_m": 0.4205078188385436,
+      "actual_weave": false,
+      "sim_seconds": 149.5
+    },
+    {
+      "name": "outer_only_gap_0.5_left_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": -0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.85,
+          "y": -0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.49999999999999944,
+        0.49999999999999944
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21820271362868987,
+      "minimum_wall_clearance_m": 0.41295082619225454,
+      "actual_weave": false,
+      "sim_seconds": 96.60000000000001
+    },
+    {
+      "name": "outer_only_gap_0.5_right_first",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": 0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.85,
+          "y": 0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.49999999999999944,
+        0.49999999999999944
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22648346733483513,
+      "minimum_wall_clearance_m": 0.9874107957628464,
+      "actual_weave": false,
+      "sim_seconds": 64.3
+    },
+    {
+      "name": "heldout_random_00_1box_aligned",
+      "layout": [
+        {
+          "x": 4.444419042383276,
+          "y": 0.0336697509478589,
+          "depth": 0.358700893619751,
+          "width": 0.41809876362744025,
+          "height": 0.5717311353940422
+        }
+      ],
+      "face_gaps_m": [],
+      "result": "stalled",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22908880311960367,
+      "minimum_wall_clearance_m": 1.1288195655407558,
+      "actual_weave": false,
+      "sim_seconds": 47.900000000000006
+    },
+    {
+      "name": "heldout_random_01_1box_staggered",
+      "layout": [
+        {
+          "x": 4.661846919950423,
+          "y": -0.05248582523686329,
+          "depth": 0.5610073672586199,
+          "width": 0.6271392031568879,
+          "height": 0.7372721391271577
+        }
+      ],
+      "face_gaps_m": [],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2100567131017453,
+      "minimum_wall_clearance_m": 0.3705816541963445,
+      "actual_weave": false,
+      "sim_seconds": 102.30000000000001
+    },
+    {
+      "name": "heldout_random_02_2box_staggered",
+      "layout": [
+        {
+          "x": 5.186215483151429,
+          "y": -0.13070819602860775,
+          "depth": 0.42546875666354644,
+          "width": 0.5730521349108182,
+          "height": 0.7901543426774377
+        },
+        {
+          "x": 8.330771547015594,
+          "y": 0.12398820529653315,
+          "depth": 0.41011581448995693,
+          "width": 0.42654628810004813,
+          "height": 0.7954498090556463
+        }
+      ],
+      "face_gaps_m": [
+        2.726763778287414
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20384376826544692,
+      "minimum_wall_clearance_m": 0.3666230193844433,
+      "actual_weave": false,
+      "sim_seconds": 92.5
+    },
+    {
+      "name": "heldout_random_03_2box_wide_S",
+      "layout": [
+        {
+          "x": 4.212594301063846,
+          "y": 0.48280831976468364,
+          "depth": 0.5570084808058791,
+          "width": 0.49397511385147475,
+          "height": 0.832171551083152
+        },
+        {
+          "x": 7.40839126109064,
+          "y": -0.5069690681519444,
+          "depth": 0.5219422837697956,
+          "width": 0.35896614296853163,
+          "height": 0.5711730565275966
+        }
+      ],
+      "face_gaps_m": [
+        2.656321577738956
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20767011141600225,
+      "minimum_wall_clearance_m": 0.8253396322943267,
+      "actual_weave": true,
+      "sim_seconds": 101.80000000000001
+    },
+    {
+      "name": "heldout_random_04_2box_staggered",
+      "layout": [
+        {
+          "x": 4.513349059365726,
+          "y": -0.34203841405554974,
+          "depth": 0.4921478248283978,
+          "width": 0.5056584441490092,
+          "height": 0.5978673085350857
+        },
+        {
+          "x": 7.406674288414319,
+          "y": 0.2864543755542681,
+          "depth": 0.2236715771303849,
+          "width": 0.5716891436634112,
+          "height": 0.5187327306405194
+        }
+      ],
+      "face_gaps_m": [
+        2.535415528069201
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2197515571728088,
+      "minimum_wall_clearance_m": 0.538986723603929,
+      "actual_weave": false,
+      "sim_seconds": 72.10000000000001
+    },
+    {
+      "name": "heldout_random_05_2box_wide_S",
+      "layout": [
+        {
+          "x": 4.934734820842233,
+          "y": -0.5301912488421988,
+          "depth": 0.35025047843723794,
+          "width": 0.5403502800747492,
+          "height": 0.7448511713994446
+        },
+        {
+          "x": 7.991205035334183,
+          "y": 0.5378721822226917,
+          "depth": 0.3298616059179599,
+          "width": 0.519107964044794,
+          "height": 0.5567055176907736
+        }
+      ],
+      "face_gaps_m": [
+        2.7164141723143502
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21263509434071823,
+      "minimum_wall_clearance_m": 0.8574326121442923,
+      "actual_weave": true,
+      "sim_seconds": 94.2
+    },
+    {
+      "name": "heldout_random_06_2box_staggered",
+      "layout": [
+        {
+          "x": 5.219029317764914,
+          "y": 0.11652744680150794,
+          "depth": 0.5016396463858209,
+          "width": 0.5087315973247631,
+          "height": 0.8001006637730947
+        },
+        {
+          "x": 8.464176575546317,
+          "y": -0.11179380399725217,
+          "depth": 0.3944887766104085,
+          "width": 0.7228606797460174,
+          "height": 0.550890067994114
+        }
+      ],
+      "face_gaps_m": [
+        2.7970830462832876
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2018540855308357,
+      "minimum_wall_clearance_m": 0.43679156104283523,
+      "actual_weave": false,
+      "sim_seconds": 98.5
+    },
+    {
+      "name": "heldout_random_07_2box_staggered",
+      "layout": [
+        {
+          "x": 5.227614450400272,
+          "y": -0.17899308592580335,
+          "depth": 0.36904478712689215,
+          "width": 0.4309881753093316,
+          "height": 0.7029530639340407
+        },
+        {
+          "x": 7.581827214664743,
+          "y": 0.17169976493952038,
+          "depth": 0.2857344224082782,
+          "width": 0.74743129189151,
+          "height": 0.7370183878824592
+        }
+      ],
+      "face_gaps_m": [
+        2.026823159496886
+      ],
+      "result": "stalled",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22929126552182844,
+      "minimum_wall_clearance_m": 0.47021778489981236,
+      "actual_weave": false,
+      "sim_seconds": 73.3
+    },
+    {
+      "name": "heldout_random_08_3box_staggered",
+      "layout": [
+        {
+          "x": 4.758932788929376,
+          "y": 0.194018851637556,
+          "depth": 0.46683798257908077,
+          "width": 0.5553997801815237,
+          "height": 0.5527695797992473
+        },
+        {
+          "x": 6.9612919677666145,
+          "y": -0.189592534522735,
+          "depth": 0.5498825956226123,
+          "width": 0.6559837762315285,
+          "height": 0.4820390044348972
+        },
+        {
+          "x": 8.998612764350531,
+          "y": 0.15829266913386875,
+          "depth": 0.2050898938156318,
+          "width": 0.6058710389039441,
+          "height": 0.8340934077168345
+        }
+      ],
+      "face_gaps_m": [
+        1.693998889736392,
+        1.6598345518647941
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2243228022019963,
+      "minimum_wall_clearance_m": 1.046086855536577,
+      "actual_weave": false,
+      "sim_seconds": 52.800000000000004
+    },
+    {
+      "name": "heldout_random_09_3box_staggered",
+      "layout": [
+        {
+          "x": 5.2556306567085755,
+          "y": -0.20960811552641972,
+          "depth": 0.23847950810244237,
+          "width": 0.37649721182957535,
+          "height": 0.4377384106661427
+        },
+        {
+          "x": 8.449709261507724,
+          "y": 0.2093921331458004,
+          "depth": 0.4966839069198395,
+          "width": 0.5447156263544249,
+          "height": 0.5046376711439247
+        },
+        {
+          "x": 10.428550847864997,
+          "y": -0.2491295052810183,
+          "depth": 0.2802204640568608,
+          "width": 0.6684499415626497,
+          "height": 0.6614496679276611
+        }
+      ],
+      "face_gaps_m": [
+        2.8264968972880085,
+        1.590389400868923
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20944827424677592,
+      "minimum_wall_clearance_m": 0.258356850325242,
+      "actual_weave": false,
+      "sim_seconds": 71.9
+    },
+    {
+      "name": "heldout_random_10_3box_wide_S",
+      "layout": [
+        {
+          "x": 5.181777223959226,
+          "y": 0.4650071159965132,
+          "depth": 0.35143198029039613,
+          "width": 0.6249571427987008,
+          "height": 0.5882022134679985
+        },
+        {
+          "x": 7.884320101494506,
+          "y": -0.46645319667711904,
+          "depth": 0.43858505063144715,
+          "width": 0.5575287914555831,
+          "height": 0.7346940365087915
+        },
+        {
+          "x": 10.819194074492486,
+          "y": 0.45671255938564576,
+          "depth": 0.5719781874469085,
+          "width": 0.4397692383894059,
+          "height": 0.7404230351907382
+        }
+      ],
+      "face_gaps_m": [
+        2.3075343620743585,
+        2.4295923539588022
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20844657701631603,
+      "minimum_wall_clearance_m": 0.6710571699889359,
+      "actual_weave": true,
+      "sim_seconds": 138.0
+    },
+    {
+      "name": "heldout_random_11_3box_staggered",
+      "layout": [
+        {
+          "x": 5.1157518595582925,
+          "y": -0.3214800051161037,
+          "depth": 0.2379039838932393,
+          "width": 0.4786160394755389,
+          "height": 0.7409716829573765
+        },
+        {
+          "x": 8.376829375364785,
+          "y": 0.38601972186221994,
+          "depth": 0.5223890790418841,
+          "width": 0.35424614614434025,
+          "height": 0.48232534878872435
+        },
+        {
+          "x": 10.594231849184757,
+          "y": -0.36389889020938077,
+          "depth": 0.4741275404035824,
+          "width": 0.669952598952208,
+          "height": 0.63766849535942
+        }
+      ],
+      "face_gaps_m": [
+        2.880930984338932,
+        1.7191441640972382
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2222919494730124,
+      "minimum_wall_clearance_m": 0.5562913625015853,
+      "actual_weave": true,
+      "sim_seconds": 163.10000000000002
+    },
+    {
+      "name": "heldout_random_12_3box_staggered",
+      "layout": [
+        {
+          "x": 4.824190441150606,
+          "y": 0.18713273518735887,
+          "depth": 0.41809284567053745,
+          "width": 0.6390773729405783,
+          "height": 0.47527126772333805
+        },
+        {
+          "x": 7.441253484510261,
+          "y": -0.15071389412178152,
+          "depth": 0.31754799429115926,
+          "width": 0.43806189979431187,
+          "height": 0.7093138896262722
+        },
+        {
+          "x": 10.759569977690266,
+          "y": 0.21016698288399518,
+          "depth": 0.5973590277146336,
+          "width": 0.41805944046246835,
+          "height": 0.810207784252003
+        }
+      ],
+      "face_gaps_m": [
+        2.249242623378807,
+        2.8608629821771077
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2360930760303912,
+      "minimum_wall_clearance_m": 1.0606056972676678,
+      "actual_weave": false,
+      "sim_seconds": 53.900000000000006
+    },
+    {
+      "name": "heldout_random_13_3box_staggered",
+      "layout": [
+        {
+          "x": 4.848410034595339,
+          "y": -0.31216585148307874,
+          "depth": 0.5076195498991779,
+          "width": 0.4421775998434415,
+          "height": 0.44068764642101466
+        },
+        {
+          "x": 7.327379045569488,
+          "y": 0.24289117178240802,
+          "depth": 0.2992992253143586,
+          "width": 0.6862080294741947,
+          "height": 0.745679597277598
+        },
+        {
+          "x": 9.421506955400602,
+          "y": -0.2976965228085991,
+          "depth": 0.22891545088619303,
+          "width": 0.6668355439813256,
+          "height": 0.6896872669366612
+        }
+      ],
+      "face_gaps_m": [
+        2.0755096233673807,
+        1.8300205717308389
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.23110665144891573,
+      "minimum_wall_clearance_m": 0.3193398696255887,
+      "actual_weave": false,
+      "sim_seconds": 55.2
+    },
+    {
+      "name": "heldout_random_14_3box_staggered",
+      "layout": [
+        {
+          "x": 4.9546236615467425,
+          "y": 0.30443236407867214,
+          "depth": 0.35999581084837906,
+          "width": 0.48921120741893753,
+          "height": 0.6897851238388567
+        },
+        {
+          "x": 7.6561474642081055,
+          "y": -0.33873266030427035,
+          "depth": 0.20259403595997427,
+          "width": 0.6205437860233269,
+          "height": 0.6838992525133784
+        },
+        {
+          "x": 9.821010594023527,
+          "y": 0.3315647771315592,
+          "depth": 0.21403026718793738,
+          "width": 0.6287837056904445,
+          "height": 0.6733166792857932
+        }
+      ],
+      "face_gaps_m": [
+        2.4202288792571864,
+        1.9565509782414656
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2137415088939388,
+      "minimum_wall_clearance_m": 1.0829119195339667,
+      "actual_weave": false,
+      "sim_seconds": 53.900000000000006
+    },
+    {
+      "name": "heldout_random_15_3box_staggered",
+      "layout": [
+        {
+          "x": 4.993058883824828,
+          "y": 0.23589845246436608,
+          "depth": 0.4878098395733059,
+          "width": 0.42946071810315595,
+          "height": 0.498583563909222
+        },
+        {
+          "x": 8.111894264977565,
+          "y": -0.30257883769562216,
+          "depth": 0.5583095202655277,
+          "width": 0.6056216185010319,
+          "height": 0.7063094562030325
+        },
+        {
+          "x": 10.55519204981998,
+          "y": 0.22734990823912318,
+          "depth": 0.43349114144383843,
+          "width": 0.46808708193133347,
+          "height": 0.6794618938658752
+        }
+      ],
+      "face_gaps_m": [
+        2.59577570123332,
+        1.9473974539877315
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22335391380438185,
+      "minimum_wall_clearance_m": 1.0662240521582769,
+      "actual_weave": false,
+      "sim_seconds": 56.800000000000004
+    },
+    {
+      "name": "spacing_2box_offset_0.15_gap_0.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.49999999999999944
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20434639348633069,
+      "minimum_wall_clearance_m": 0.6215338162820552,
+      "actual_weave": false,
+      "sim_seconds": 77.9
+    },
+    {
+      "name": "spacing_2box_offset_0.15_gap_1.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.55,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.9999999999999994
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20130174738764697,
+      "minimum_wall_clearance_m": 0.3407132106561872,
+      "actual_weave": false,
+      "sim_seconds": 82.9
+    },
+    {
+      "name": "spacing_2box_offset_0.15_gap_1.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.05,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.4999999999999996
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2025111141901965,
+      "minimum_wall_clearance_m": 0.4243922489497203,
+      "actual_weave": false,
+      "sim_seconds": 84.0
+    },
+    {
+      "name": "spacing_2box_offset_0.15_gap_2.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.55,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.9999999999999996
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20403486253362005,
+      "minimum_wall_clearance_m": 0.35623420131036676,
+      "actual_weave": false,
+      "sim_seconds": 93.60000000000001
+    },
+    {
+      "name": "spacing_2box_offset_0.15_gap_2.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        2.5000000000000004
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2036029009652681,
+      "minimum_wall_clearance_m": 0.414724280516507,
+      "actual_weave": false,
+      "sim_seconds": 95.9
+    },
+    {
+      "name": "spacing_2box_offset_0.15_gap_3.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.55,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.0000000000000004
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20208151553772322,
+      "minimum_wall_clearance_m": 0.42868470294230177,
+      "actual_weave": true,
+      "sim_seconds": 141.70000000000002
+    },
+    {
+      "name": "spacing_2box_offset_0.15_gap_3.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.05,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.5000000000000004
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2032556824833453,
+      "minimum_wall_clearance_m": 0.4164955951098279,
+      "actual_weave": true,
+      "sim_seconds": 137.4
+    },
+    {
+      "name": "spacing_2box_offset_0.15_gap_4.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.55,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        4.0
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2035396951314888,
+      "minimum_wall_clearance_m": 0.418756364787654,
+      "actual_weave": true,
+      "sim_seconds": 131.20000000000002
+    },
+    {
+      "name": "spacing_2box_offset_0.55_gap_0.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.49999999999999944
+      ],
+      "result": "projection_hold",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22216161873234166,
+      "minimum_wall_clearance_m": 0.8924121050995149,
+      "actual_weave": false,
+      "sim_seconds": 24.900000000000002
+    },
+    {
+      "name": "spacing_2box_offset_0.55_gap_1.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.55,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.9999999999999994
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22467040966918927,
+      "minimum_wall_clearance_m": 0.7176471228025665,
+      "actual_weave": false,
+      "sim_seconds": 79.60000000000001
+    },
+    {
+      "name": "spacing_2box_offset_0.55_gap_1.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.05,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.4999999999999996
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21061407275970662,
+      "minimum_wall_clearance_m": 0.8490435419513551,
+      "actual_weave": false,
+      "sim_seconds": 86.9
+    },
+    {
+      "name": "spacing_2box_offset_0.55_gap_2.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.55,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.9999999999999996
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21175744586477102,
+      "minimum_wall_clearance_m": 0.8533804576685948,
+      "actual_weave": true,
+      "sim_seconds": 122.4
+    },
+    {
+      "name": "spacing_2box_offset_0.55_gap_2.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        2.5000000000000004
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22724275993113707,
+      "minimum_wall_clearance_m": 1.0858420755564921,
+      "actual_weave": false,
+      "sim_seconds": 64.7
+    },
+    {
+      "name": "spacing_2box_offset_0.55_gap_3.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.55,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.0000000000000004
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21183308548782256,
+      "minimum_wall_clearance_m": 0.8478882435263296,
+      "actual_weave": true,
+      "sim_seconds": 111.5
+    },
+    {
+      "name": "spacing_2box_offset_0.55_gap_3.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.05,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.5000000000000004
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20817937616676943,
+      "minimum_wall_clearance_m": 0.786417047733774,
+      "actual_weave": true,
+      "sim_seconds": 125.9
+    },
+    {
+      "name": "spacing_2box_offset_0.55_gap_4.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.55,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        4.0
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21943175402976453,
+      "minimum_wall_clearance_m": 0.7468191225259135,
+      "actual_weave": true,
+      "sim_seconds": 92.60000000000001
+    },
+    {
+      "name": "spacing_3box_offset_0.15_gap_0.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.49999999999999944,
+        0.49999999999999944
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2603216284788153,
+      "minimum_wall_clearance_m": 0.4443920722513792,
+      "actual_weave": false,
+      "sim_seconds": 56.7
+    },
+    {
+      "name": "spacing_3box_offset_0.15_gap_1.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.55,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.9999999999999994,
+        0.9999999999999994
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21022034297428444,
+      "minimum_wall_clearance_m": 0.4357470864572761,
+      "actual_weave": false,
+      "sim_seconds": 53.0
+    },
+    {
+      "name": "spacing_3box_offset_0.15_gap_1.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.4999999999999996,
+        1.4999999999999996
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2274628941817811,
+      "minimum_wall_clearance_m": 0.3011472580113286,
+      "actual_weave": false,
+      "sim_seconds": 56.5
+    },
+    {
+      "name": "spacing_3box_offset_0.15_gap_2.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.55,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.9999999999999996,
+        1.9999999999999996
+      ],
+      "result": "stalled",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2093820337194889,
+      "minimum_wall_clearance_m": 0.40146409414130546,
+      "actual_weave": false,
+      "sim_seconds": 76.10000000000001
+    },
+    {
+      "name": "spacing_3box_offset_0.15_gap_2.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 10.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        2.5000000000000004,
+        2.4999999999999987
+      ],
+      "result": "stalled",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21293409737011723,
+      "minimum_wall_clearance_m": 0.4017048305236557,
+      "actual_weave": false,
+      "sim_seconds": 81.2
+    },
+    {
+      "name": "spacing_3box_offset_0.15_gap_3.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.55,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 11.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.0000000000000004,
+        2.9999999999999987
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.214295419849199,
+      "minimum_wall_clearance_m": 0.3887732622018689,
+      "actual_weave": false,
+      "sim_seconds": 82.30000000000001
+    },
+    {
+      "name": "spacing_3box_offset_0.15_gap_3.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 12.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.5000000000000004,
+        3.4999999999999987
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2255433082875187,
+      "minimum_wall_clearance_m": 0.38160484591832433,
+      "actual_weave": false,
+      "sim_seconds": 86.5
+    },
+    {
+      "name": "spacing_3box_offset_0.15_gap_4.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.55,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 13.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        4.0,
+        3.9999999999999987
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2025956106590202,
+      "minimum_wall_clearance_m": 0.29663324547431213,
+      "actual_weave": false,
+      "sim_seconds": 71.60000000000001
+    },
+    {
+      "name": "spacing_3box_offset_0.55_gap_0.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.49999999999999944,
+        0.49999999999999944
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.792300081177464,
+      "minimum_wall_clearance_m": 0.3350473751664831,
+      "actual_weave": false,
+      "sim_seconds": 44.6
+    },
+    {
+      "name": "spacing_3box_offset_0.55_gap_1.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.55,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        0.9999999999999994,
+        0.9999999999999994
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.3550416828444849,
+      "minimum_wall_clearance_m": 0.7648963599667442,
+      "actual_weave": false,
+      "sim_seconds": 76.7
+    },
+    {
+      "name": "spacing_3box_offset_0.55_gap_1.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.05,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.4999999999999996,
+        1.4999999999999996
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.20797870673724392,
+      "minimum_wall_clearance_m": 0.7142612133390354,
+      "actual_weave": false,
+      "sim_seconds": 109.9
+    },
+    {
+      "name": "spacing_3box_offset_0.55_gap_2.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.55,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        1.9999999999999996,
+        1.9999999999999996
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2136231649358054,
+      "minimum_wall_clearance_m": 0.7457281225067901,
+      "actual_weave": true,
+      "sim_seconds": 113.80000000000001
+    },
+    {
+      "name": "spacing_3box_offset_0.55_gap_2.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 10.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        2.5000000000000004,
+        2.4999999999999987
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.2198308313006003,
+      "minimum_wall_clearance_m": 0.7369887935047696,
+      "actual_weave": true,
+      "sim_seconds": 103.0
+    },
+    {
+      "name": "spacing_3box_offset_0.55_gap_3.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.55,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 11.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.0000000000000004,
+        2.9999999999999987
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.21759726690382397,
+      "minimum_wall_clearance_m": 0.7398676726137897,
+      "actual_weave": true,
+      "sim_seconds": 97.10000000000001
+    },
+    {
+      "name": "spacing_3box_offset_0.55_gap_3.50",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.05,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 12.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        3.5000000000000004,
+        3.4999999999999987
+      ],
+      "result": "goal",
+      "validated": true,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22063947849458623,
+      "minimum_wall_clearance_m": 0.7875995539674372,
+      "actual_weave": true,
+      "sim_seconds": 101.2
+    },
+    {
+      "name": "spacing_3box_offset_0.55_gap_4.00",
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.55,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 13.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "face_gaps_m": [
+        4.0,
+        3.9999999999999987
+      ],
+      "result": "no_progress",
+      "validated": false,
+      "contacts": 0,
+      "minimum_box_clearance_m": 0.22137370029145487,
+      "minimum_wall_clearance_m": 0.7824321125122915,
+      "actual_weave": false,
+      "sim_seconds": 70.60000000000001
+    }
+  ]
+}

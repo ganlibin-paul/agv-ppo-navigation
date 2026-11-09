@@ -1,0 +1,1024 @@
+[
+  [
+    {
+      "name": "baseline_S_only_gap_2.0_left_first",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 0,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 2.0,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.0,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269200,
+      "group_original": "three_boxes",
+      "family": "S_only",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "baseline",
+      "box_y_values": [
+        -0.55,
+        0.55,
+        -0.55
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.55,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "source_validation_index": 0
+    },
+    {
+      "name": "baseline_S_only_gap_2.5_left_first",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 2,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 2.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269202,
+      "group_original": "three_boxes",
+      "family": "S_only",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "baseline",
+      "box_y_values": [
+        -0.55,
+        0.55,
+        -0.55
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 10.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "source_validation_index": 2
+    },
+    {
+      "name": "baseline_both_options_gap_1.5_left_first",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 8,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 1.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 1.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269208,
+      "group_original": "three_boxes",
+      "family": "both_options",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "baseline",
+      "box_y_values": [
+        -0.15,
+        0.15,
+        -0.15
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "source_validation_index": 8
+    },
+    {
+      "name": "baseline_outer_only_gap_0.5_right_first",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 15,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 0.5,
+      "staggered": false,
+      "departing_pedestrian": false,
+      "actual_gap": 0.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        0.0285493286498722,
+        0.002813468275167867
+      ],
+      "seed": 20269215,
+      "group_original": "three_boxes",
+      "family": "outer_only",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "baseline",
+      "box_y_values": [
+        0.05,
+        0.05,
+        0.05
+      ],
+      "dynamic_mode": null,
+      "mirror": true,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": 0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.85,
+          "y": 0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "source_validation_index": 15
+    },
+    {
+      "name": "baseline_heldout_random_00_1box_aligned",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 0,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 2.0,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.0,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269400,
+      "group_original": "three_boxes",
+      "family": "aligned",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "baseline",
+      "box_y_values": [
+        -0.55,
+        0.55,
+        -0.55
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 4.444419042383276,
+          "y": 0.0336697509478589,
+          "depth": 0.358700893619751,
+          "width": 0.41809876362744025,
+          "height": 0.5717311353940422
+        }
+      ],
+      "n_boxes": 1,
+      "source_validation_index": 16
+    },
+    {
+      "name": "baseline_heldout_random_08_3box_staggered",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 8,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 1.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 1.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269408,
+      "group_original": "three_boxes",
+      "family": "staggered",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "baseline",
+      "box_y_values": [
+        -0.15,
+        0.15,
+        -0.15
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 4.758932788929376,
+          "y": 0.194018851637556,
+          "depth": 0.46683798257908077,
+          "width": 0.5553997801815237,
+          "height": 0.5527695797992473
+        },
+        {
+          "x": 6.9612919677666145,
+          "y": -0.189592534522735,
+          "depth": 0.5498825956226123,
+          "width": 0.6559837762315285,
+          "height": 0.4820390044348972
+        },
+        {
+          "x": 8.998612764350531,
+          "y": 0.15829266913386875,
+          "depth": 0.2050898938156318,
+          "width": 0.6058710389039441,
+          "height": 0.8340934077168345
+        }
+      ],
+      "n_boxes": 3,
+      "source_validation_index": 24
+    },
+    {
+      "name": "baseline_heldout_random_11_3box_staggered",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 11,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 2.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        0.0285493286498722,
+        0.002813468275167867
+      ],
+      "seed": 20269411,
+      "group_original": "three_boxes",
+      "family": "staggered",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "baseline",
+      "box_y_values": [
+        0.15,
+        -0.15,
+        0.15
+      ],
+      "dynamic_mode": null,
+      "mirror": true,
+      "layout": [
+        {
+          "x": 5.1157518595582925,
+          "y": -0.3214800051161037,
+          "depth": 0.2379039838932393,
+          "width": 0.4786160394755389,
+          "height": 0.7409716829573765
+        },
+        {
+          "x": 8.376829375364785,
+          "y": 0.38601972186221994,
+          "depth": 0.5223890790418841,
+          "width": 0.35424614614434025,
+          "height": 0.48232534878872435
+        },
+        {
+          "x": 10.594231849184757,
+          "y": -0.36389889020938077,
+          "depth": 0.4741275404035824,
+          "width": 0.669952598952208,
+          "height": 0.63766849535942
+        }
+      ],
+      "n_boxes": 3,
+      "source_validation_index": 27
+    },
+    {
+      "name": "baseline_spacing_3box_offset_0.15_gap_0.50",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 0,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 0.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.0,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269548,
+      "group_original": "three_boxes",
+      "family": "spacing_probe",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "baseline",
+      "box_y_values": [
+        -0.55,
+        0.55,
+        -0.55
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "n_boxes": 3,
+      "source_validation_index": 48
+    },
+    {
+      "name": "route_fix_S_only_gap_2.0_left_first",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 0,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 2.0,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.0,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269200,
+      "group_original": "three_boxes",
+      "family": "S_only",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "route_fix",
+      "box_y_values": [
+        -0.55,
+        0.55,
+        -0.55
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.55,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 9.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "source_validation_index": 0
+    },
+    {
+      "name": "route_fix_S_only_gap_2.5_left_first",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 2,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 2.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269202,
+      "group_original": "three_boxes",
+      "family": "S_only",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "route_fix",
+      "box_y_values": [
+        -0.55,
+        0.55,
+        -0.55
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.05,
+          "y": 0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 10.85,
+          "y": -0.55,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "source_validation_index": 2
+    },
+    {
+      "name": "route_fix_both_options_gap_1.5_left_first",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 8,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 1.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 1.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269208,
+      "group_original": "three_boxes",
+      "family": "both_options",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "route_fix",
+      "box_y_values": [
+        -0.15,
+        0.15,
+        -0.15
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 7.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 8.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "source_validation_index": 8
+    },
+    {
+      "name": "route_fix_outer_only_gap_0.5_right_first",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 15,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 0.5,
+      "staggered": false,
+      "departing_pedestrian": false,
+      "actual_gap": 0.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        0.0285493286498722,
+        0.002813468275167867
+      ],
+      "seed": 20269215,
+      "group_original": "three_boxes",
+      "family": "outer_only",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "route_fix",
+      "box_y_values": [
+        0.05,
+        0.05,
+        0.05
+      ],
+      "dynamic_mode": null,
+      "mirror": true,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": 0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": 0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.85,
+          "y": 0.05,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "source_validation_index": 15
+    },
+    {
+      "name": "route_fix_heldout_random_00_1box_aligned",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 0,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 2.0,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.0,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269400,
+      "group_original": "three_boxes",
+      "family": "aligned",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "route_fix",
+      "box_y_values": [
+        -0.55,
+        0.55,
+        -0.55
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 4.444419042383276,
+          "y": 0.0336697509478589,
+          "depth": 0.358700893619751,
+          "width": 0.41809876362744025,
+          "height": 0.5717311353940422
+        }
+      ],
+      "n_boxes": 1,
+      "source_validation_index": 16
+    },
+    {
+      "name": "route_fix_heldout_random_08_3box_staggered",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 8,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 1.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 1.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269408,
+      "group_original": "three_boxes",
+      "family": "staggered",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "route_fix",
+      "box_y_values": [
+        -0.15,
+        0.15,
+        -0.15
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 4.758932788929376,
+          "y": 0.194018851637556,
+          "depth": 0.46683798257908077,
+          "width": 0.5553997801815237,
+          "height": 0.5527695797992473
+        },
+        {
+          "x": 6.9612919677666145,
+          "y": -0.189592534522735,
+          "depth": 0.5498825956226123,
+          "width": 0.6559837762315285,
+          "height": 0.4820390044348972
+        },
+        {
+          "x": 8.998612764350531,
+          "y": 0.15829266913386875,
+          "depth": 0.2050898938156318,
+          "width": 0.6058710389039441,
+          "height": 0.8340934077168345
+        }
+      ],
+      "n_boxes": 3,
+      "source_validation_index": 24
+    },
+    {
+      "name": "route_fix_heldout_random_11_3box_staggered",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 11,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 2.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.5,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        0.0285493286498722,
+        0.002813468275167867
+      ],
+      "seed": 20269411,
+      "group_original": "three_boxes",
+      "family": "staggered",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "route_fix",
+      "box_y_values": [
+        0.15,
+        -0.15,
+        0.15
+      ],
+      "dynamic_mode": null,
+      "mirror": true,
+      "layout": [
+        {
+          "x": 5.1157518595582925,
+          "y": -0.3214800051161037,
+          "depth": 0.2379039838932393,
+          "width": 0.4786160394755389,
+          "height": 0.7409716829573765
+        },
+        {
+          "x": 8.376829375364785,
+          "y": 0.38601972186221994,
+          "depth": 0.5223890790418841,
+          "width": 0.35424614614434025,
+          "height": 0.48232534878872435
+        },
+        {
+          "x": 10.594231849184757,
+          "y": -0.36389889020938077,
+          "depth": 0.4741275404035824,
+          "width": 0.669952598952208,
+          "height": 0.63766849535942
+        }
+      ],
+      "n_boxes": 3,
+      "source_validation_index": 27
+    },
+    {
+      "name": "route_fix_spacing_3box_offset_0.15_gap_0.50",
+      "group": "three_boxes",
+      "x": 5.25,
+      "y": -0.15,
+      "width": 0.6,
+      "depth": 0.3,
+      "start_y": -0.0285493286498722,
+      "corridor_width": 3.3,
+      "reference_speed": 0.2,
+      "target_speed_cap": 0.2,
+      "clear_route": false,
+      "projection": true,
+      "source_case_index": 0,
+      "background_y": 0.5,
+      "second": null,
+      "third": null,
+      "target_gap": 0.5,
+      "staggered": true,
+      "departing_pedestrian": false,
+      "actual_gap": 2.0,
+      "actual_speed_cap": 0.2,
+      "initial_pose": [
+        1.6199712536517838,
+        -0.0285493286498722,
+        -0.002813468275167867
+      ],
+      "seed": 20269548,
+      "group_original": "three_boxes",
+      "family": "spacing_probe",
+      "goal_x": 15.2,
+      "expected": "goal",
+      "arm": "route_fix",
+      "box_y_values": [
+        -0.55,
+        0.55,
+        -0.55
+      ],
+      "dynamic_mode": null,
+      "mirror": false,
+      "layout": [
+        {
+          "x": 5.25,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.05,
+          "y": 0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        },
+        {
+          "x": 6.85,
+          "y": -0.15,
+          "depth": 0.3,
+          "width": 0.6,
+          "height": 0.58
+        }
+      ],
+      "n_boxes": 3,
+      "source_validation_index": 48
+    }
+  ]
+]

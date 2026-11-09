@@ -1,0 +1,63 @@
+"""Static-scene action projection using real-available raw scan and body bounds.
+V88 simulation candidate: speed-dependent planar horizon and 20-21cm scan margin; not a certified real motor model.
+V48 test body x=[-0.475,0.50], y=[-0.3515,0.3515]; approximate front measurement. No obstacle truth input.
+"""
+import math
+import numpy as np
+from input_bridge_v6 import map_residual
+
+
+def select_action(ranges, proposed, previous_command, v_ref, w_ref, path_speed, speed_cap, points_base=None):
+    scan=np.asarray(ranges,dtype=float)
+    if scan.shape!=(1083,):
+        raise ValueError('expected the canonical 1083-ray scan')
+    valid=np.isfinite(scan)&(scan>=.05)&(scan<=50.)
+    brake=np.clip([-v_ref/.4,-w_ref/.2],-1.,1.)
+    if not valid.any():
+        return brake,dict(intervened=True,feasible=False,reason='no_valid_scan')
+    if points_base is None:
+        near=valid&(scan<2.0)
+        angles=-3.14+np.flatnonzero(near)*.0058
+        points=np.column_stack((scan[near]*np.cos(angles),scan[near]*np.sin(angles)))
+    else:
+        points=points_base
+    if not len(points):
+        return np.asarray(proposed).copy(),dict(intervened=False,feasible=True,reason='no_near_returns')
+    proposed=np.clip(np.asarray(proposed,dtype=float),-1.,1.)
+    candidates=[proposed,brake]
+    for v in [0.,speed_cap/3.,2.*speed_cap/3.,speed_cap]:
+        for w in [-.2,-.1,-.05,-.025,0.,.025,.05,.1,.2]:
+            candidates.append(np.clip([(v-v_ref)/.4,(w-w_ref)/.2],-1.,1.))
+    best=None;best_cost=float('inf');best_min=None;raw_min=None
+    rollout_steps=max(10,int(math.ceil((max(0.,float(previous_command[0]))/.5+.2)/.1)))
+    for index,action in enumerate(candidates):
+        x=y=yaw=0.;command=np.asarray(previous_command,dtype=float).copy()
+        minimum=float('inf');reserve=float('inf')
+        for step in range(rollout_steps):
+            before=command.copy()
+            command,_=map_residual(action,command,v_ref,w_ref,path_speed,.1,training_speed_cap=speed_cap)
+            v,w=(before+command)/2.
+            mid=yaw+.05*w
+            x+=.1*v*math.cos(mid);y+=.1*v*math.sin(mid);yaw+=.1*w
+            c,s=math.cos(yaw),math.sin(yaw)
+            delta=points-[x,y]
+            local_x=c*delta[:,0]+s*delta[:,1]
+            local_y=-s*delta[:,0]+c*delta[:,1]
+            q=np.column_stack((np.maximum(-.475-local_x,local_x-.5),np.abs(local_y)-.3515))
+            distances=np.sqrt((np.maximum(q,0.)**2).sum(axis=1))+np.minimum(q.max(axis=1),0.)
+            gap=float(distances.min());minimum=min(minimum,gap)
+            # Reserve 20cm plus 1cm tracking room over the predicted motion.
+            margin=.20+.01*(step+1)/float(rollout_steps)
+            reserve=min(reserve,gap-margin)
+        if index==0:
+            raw_min=minimum
+            if reserve>=0.:
+                return action.copy(),dict(intervened=False,feasible=True,reason='proposed_rollout_clear',predicted_minimum=minimum)
+        if reserve>=0.:
+            change=action-proposed
+            cost=change[0]**2+.2*change[1]**2-.3*action[0]+.005/(minimum+.05)
+            if cost<best_cost:
+                best_cost=cost;best=action.copy();best_min=minimum
+    if best is None:
+        return brake,dict(intervened=True,feasible=False,reason='no_feasible_rollout_braking',proposed_predicted_minimum=raw_min)
+    return best,dict(intervened=True,feasible=True,reason='selected_scan_clear_rollout',predicted_minimum=best_min,proposed_predicted_minimum=raw_min)

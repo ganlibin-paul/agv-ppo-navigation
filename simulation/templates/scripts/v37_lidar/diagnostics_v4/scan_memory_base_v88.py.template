@@ -1,0 +1,34 @@
+"""Episode-local static scan memory in the same metric frame as the pose.
+No obstacle truth, ROS publishers or fabricated range returns. Reset per task.
+Moving-obstacle tracking and localization jumps are outside this static test.
+"""
+import math
+import numpy as np
+
+
+class ScanObstacleMemory(object):
+    def __init__(self):
+        self.points=np.empty((0,2),dtype=float)
+        self.angles=-3.14+np.arange(1083)*.0058
+
+    def reset(self):
+        self.points=np.empty((0,2),dtype=float)
+
+    def update(self, pose, ranges):
+        x,y,yaw=pose[:3];c,s=math.cos(yaw),math.sin(yaw)
+        scan=np.asarray(ranges,dtype=float)
+        valid=np.isfinite(scan)&(scan>=.05)&(scan<=3.)
+        a=self.angles[valid]+yaw
+        hits=np.column_stack((x+scan[valid]*np.cos(a),y+scan[valid]*np.sin(a)))
+        points=np.concatenate((self.points,hits),axis=0)
+        delta=points-[x,y]
+        points=points[(delta**2).sum(axis=1)<=9.]
+        # Retain an observed point per 2cm cell; do not replace it by a cell center.
+        cells=np.ascontiguousarray(np.floor(points/.02).astype(np.int64))
+        keys=cells.view(np.dtype((np.void,cells.dtype.itemsize*2))).ravel()
+        _,indices=np.unique(keys,return_index=True)
+        self.points=points[indices]
+        delta=self.points-[x,y]
+        close=(delta**2).sum(axis=1)<2.0**2
+        delta=delta[close]
+        return np.column_stack((c*delta[:,0]+s*delta[:,1],-s*delta[:,0]+c*delta[:,1]))

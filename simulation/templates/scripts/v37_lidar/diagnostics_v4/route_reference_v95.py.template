@@ -1,0 +1,86 @@
+"""Simulation route-choice reference using observed swept paths and the existing residual interface."""
+import math
+import numpy as np
+from static_route_v88 import RouteReference as OriginalRoute,_return_to_goal,META
+from local_replanner_v83 import body_clearance
+from observed_route_planner_v95 import ObservedRoutePlanner
+META=dict(META,scope='V93 short-prefix execution and projected-stop replanning; same observed swept-path checks',planner_margin_m=.24)
+
+
+class RouteReference(OriginalRoute):
+    def __init__(self,points):
+        OriginalRoute.__init__(self,points)
+        self.local_planner=ObservedRoutePlanner();self.local_path=[];self.path_index=0
+        self.planning_pose=None;self.replan_count=0;self.rejected_completed_paths=0
+        self.goal_align=False;self.blocked_execution_frames=0;self.route_events=[];self.reference_tick=0;self.last_trigger=None
+        self.speed_hint=.2;self.route_choice=None;self.choice_history=[];self.wait_initial_scan=True;self.observed_scan_history=[]
+
+    def record_execution(self,proposed,command,projection,v_ref):
+        wants_forward=v_ref+.4*float(proposed[0])>.03
+        blocked=projection is not None and projection['intervened'] and wants_forward and abs(command[0])<.005
+        self.blocked_execution_frames=self.blocked_execution_frames+1 if blocked else 0
+
+    def references(self,pose,merged,speed_limit,points_base,raw_scans,measured_motion):
+        self.reference_tick+=1;self.route_events=[]
+        OriginalRoute.references(self,pose,merged,speed_limit,points_base)
+        offset=np.asarray(pose[:2])-self.origin;angle=pose[2]-self.heading
+        x,y,yaw=float(offset@self.tangent),float(offset@self.normal),math.atan2(math.sin(angle),math.cos(angle))
+        self.local_planner.last_slice_seconds=0.;self.avoidance_side=1.
+        if self.wait_initial_scan:
+            self.wait_initial_scan=False;self.phase='WAIT_FRESH_SCENE_SCAN';self.memory[1]=0.;return 0.,0.
+        self.observed_scan_history=[q for q in self.observed_scan_history if math.hypot(q[0][0]-x,q[0][1]-y)<=3.5]
+        if not self.observed_scan_history or math.hypot(self.observed_scan_history[-1][0][0]-x,self.observed_scan_history[-1][0][1]-y)>=.25 or abs(self.observed_scan_history[-1][0][2]-yaw)>=.1:
+            scans=[dict(q,ranges=list(q['ranges'][::4]),angle_increment=q['angle_increment']*4) for q in raw_scans]
+            self.observed_scan_history.append(((x,y,yaw),scans))
+        if self.length-x<.7 and abs(y)<.25:
+            self.phase='RETURN_TO_GOAL';self.memory[1]=0.;self.speed_hint=speed_limit
+            distance=math.hypot(self.length-x,y)
+            if distance>.12:self.goal_align=False
+            elif distance<=.09:self.goal_align=True
+            if self.goal_align:
+                error=math.atan2(math.sin(-yaw),math.cos(-yaw))
+                return 0.,float(np.clip(.8*error,-.2,.2)) if abs(error)>.06 else 0.
+            return _return_to_goal((x,y,yaw),self.memory,self.length,speed_limit)
+        if self.length-x<.12:
+            self.phase='NO_OBSERVED_FORWARD_GOAL_JOIN';self.memory[1]=0.;return 0.,0.
+        invalid=False
+        if self.local_path:
+            path=np.asarray(self.local_path);self.path_index=min(int(np.searchsorted(path[:,0],x)),len(path)-1)
+            selected=path[(path[:,0]>=x)&(path[:,0]<=x+.8)][::3]
+            c,s=math.cos(yaw),math.sin(yaw)
+            for q in selected:
+                dx,dy=q[0]-x,q[1]-y
+                if body_clearance(points_base,(c*dx+s*dy,-s*dx+c*dy,q[2]-yaw))<.20:
+                    invalid=True;break
+        # A short verified prefix must execute before its endpoint can trigger replanning.
+        near_end=bool(self.local_path) and x>=self.local_path[-1][0]-min(.55,.25*(self.local_path[-1][0]-self.local_path[0][0]))
+        projected_hold=self.blocked_execution_frames>=20
+        trigger='no_path' if not self.local_path else 'observed_path_blocked' if invalid else 'projected_forward_hold' if projected_hold else 'verified_prefix_end' if near_end else None
+        need=trigger is not None
+        if self.planning_pose is not None or need:
+            self.phase='BRAKE_FOR_ROUTE_CHOICE';self.memory[1]=0.
+            if abs(measured_motion[0])>.02 or abs(measured_motion[1])>.03:return 0.,0.
+            if self.planning_pose is None:
+                self.last_trigger=trigger;self.blocked_execution_frames=0
+                self.route_events.append(dict(event='planning_started',tick=self.reference_tick,trigger=trigger,pose=[x,y,yaw],previous_choice=self.route_choice))
+                self.planning_pose=(x,y,yaw);self.local_planner.start(self.planning_pose,raw_scans,points_base,self.length,observed_views=[q for q in self.observed_scan_history if math.hypot(q[0][0]-x,q[0][1]-y)>.05])
+            self.phase='PLAN_OBSERVED_ROUTE'
+            result=self.local_planner.advance()
+            if result is None:return 0.,0.
+            self.planning_pose=None;self.replan_count+=1
+            self.local_path=result;self.path_index=0;self.route_choice=self.local_planner.choice
+            self.route_events.append(dict(event='planning_completed',tick=self.reference_tick,trigger=self.last_trigger,status=self.local_planner.status,choice=self.route_choice,path=result,candidates=self.local_planner.candidate_results))
+            if not result:
+                self.phase='NO_OBSERVED_FORWARD_ROUTE';return 0.,0.
+            self.choice_history.append(dict(self.route_choice))
+        path=np.asarray(self.local_path);index=min(int(np.searchsorted(path[:,0],x)),len(path)-1)
+        window=path[(path[:,0]>=x)&(path[:,0]<=x+1.)]
+        curvature=float(np.max(np.abs(window[:,3]))) if len(window) else 0.
+        self.speed_hint=min(speed_limit,max(.04,.16/max(curvature,.01)))
+        target_index=min(int(np.searchsorted(path[:,0],x+.35+self.speed_hint)),len(path)-1)
+        target=path[target_index];error=math.atan2(math.sin(math.atan2(target[1]-y,target[0]-x)-yaw),math.cos(math.atan2(target[1]-y,target[0]-x)-yaw))
+        if abs(error)>.5:self.speed_hint=min(self.speed_hint,.06)
+        distance=math.hypot(target[0]-x,target[1]-y)
+        omega=float(np.clip(2.*self.speed_hint*math.sin(error)/max(distance,.15),-.2,.2))
+        self.phase='PPO_ROUTE_FOLLOW';self.memory[1]=1.;self.memory[2]=0.;self.bypass_lane=float(target[1])
+        return 0.,omega

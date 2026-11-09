@@ -1,0 +1,168 @@
+"""Reference-inspired AMR appearance. Only render geometry/materials; no physics APIs."""
+import math
+import hashlib
+import json
+from pxr import UsdGeom, UsdShade, Sdf, Gf
+BASE='/LYH_LJR/base_footprint'
+
+
+def physics_snapshot(stage):
+    result={}
+    for p in stage.Traverse():
+        schemas=list(p.GetAppliedSchemas())
+        if not any('Physics' in a or 'Physx' in a for a in schemas):
+            continue
+        data={'schemas':schemas}
+        for a in p.GetAttributes():
+            n=a.GetName()
+            if n not in ('visibility','purpose') and not n.startswith(('primvars:','inputs:')):
+                data[n]=str(a.Get())
+        for rel in p.GetRelationships():
+            n=rel.GetName()
+            if n != 'material:binding':
+                data[n]=str(rel.GetTargets())
+        parent=p.GetParent()
+        while parent and not parent.IsPseudoRoot():
+            xf=UsdGeom.Xformable(parent)
+            if xf:
+                data['ancestor:'+str(parent.GetPath())]=str(xf.GetLocalTransformation())
+            parent=parent.GetParent()
+        result[str(p.GetPath())]=data
+    return result
+
+
+def build_skin(stage):
+    before=physics_snapshot(stage)
+    root=BASE+'/ReferenceSkinV30'
+    UsdGeom.Xform.Define(stage,root)
+    mats={}
+    def mat(name,color,rough=.45,metal=0.,emit=None):
+        path='/World/ReferenceMaterialsV30/'+name
+        m=UsdShade.Material.Define(stage,path)
+        sh=UsdShade.Shader.Define(stage,path+'/Surface')
+        sh.CreateIdAttr('UsdPreviewSurface')
+        for key,val,typ in [('diffuseColor',Gf.Vec3f(*color),Sdf.ValueTypeNames.Color3f),('roughness',rough,Sdf.ValueTypeNames.Float),('metallic',metal,Sdf.ValueTypeNames.Float)]:
+            sh.CreateInput(key,typ).Set(val)
+        if emit:
+            sh.CreateInput('emissiveColor',Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*emit))
+        m.CreateSurfaceOutput().ConnectToSource(sh.ConnectableAPI(),'surface')
+        mats[name]=m
+        return m
+    mat('Shell',(0.52,0.55,0.57),.32,.35)
+    mat('Deck',(.012,.016,.020),.8,0.)
+    mat('Rubber',(.012,.015,.018),.8)
+    mat('Trim',(.028,.034,.038),.4,.15)
+    mat('Metal',(.3,.33,.35),.25,.75)
+    mat('Glass',(.006,.055,.065),.18,.35)
+    mat('Green',(.01,.42,.025),.28,0.,(.02,1.8,.06))
+    mat('Red',(.42,.009,.016),.35)
+    mat('Inset',(.004,.006,.008),.82)
+    def bind(prim,m):
+        UsdShade.MaterialBindingAPI.Apply(prim).Bind(mats[m])
+    def mesh(name,points,faces,m):
+        p=UsdGeom.Mesh.Define(stage,root+'/'+name)
+        p.CreatePointsAttr(points)
+        p.CreateFaceVertexCountsAttr([len(f) for f in faces])
+        p.CreateFaceVertexIndicesAttr([i for f in faces for i in f])
+        p.CreateSubdivisionSchemeAttr('none')
+        p.CreateDoubleSidedAttr(True)
+        bind(p.GetPrim(),m)
+        return p
+    def outline(hx,hy,r):
+        pts=[]
+        corners=[(hx-r,hy-r,0),(-hx+r,hy-r,90),(-hx+r,-hy+r,180),(hx-r,-hy+r,270)]
+        arcs=[]
+        for cx,cy,start in corners:
+            arcs.append([(cx+r*math.cos(math.radians(start+i*90/12)),cy+r*math.sin(math.radians(start+i*90/12))) for i in range(13)])
+        for i,arc in enumerate(arcs):
+            pts.extend(arc)
+            p=arc[-1]; q=arcs[(i+1)%4][0]
+            count=max(1,int(math.dist(p,q)/.012))
+            pts.extend([(p[0]+(q[0]-p[0])*j/count,p[1]+(q[1]-p[1])*j/count) for j in range(1,count)])
+        return pts
+    def slab(name,hx,hy,r,z0,z1,m,arch=False):
+        ring=outline(hx,hy,r); n=len(ring)
+        def lower(x,y):
+            if arch and abs(y)>hy-.004 and abs(x)<.089:
+                return max(z0,.08+math.sqrt(max(0,.089**2-x*x)))
+            return z0
+        pts=[(x,y,lower(x,y)) for x,y in ring]+[(x,y,z1) for x,y in ring]
+        faces=[(i,(i+1)%n,(i+1)%n+n,i+n) for i in range(n)]
+        # Caps are separate from the underside cutout so the wheel arch stays open.
+        pts.append((0,0,z1)); c=len(pts)-1
+        faces.extend([(c,n+i,n+(i+1)%n) for i in range(n)])
+        return mesh(name,pts,faces,m)
+    def cylinder(path,center,r,h,m,axis='Z'):
+        p=UsdGeom.Cylinder.Define(stage,path)
+        p.CreateRadiusAttr(r); p.CreateHeightAttr(h); p.CreateAxisAttr(axis)
+        p.AddTranslateOp().Set(Gf.Vec3d(*center))
+        bind(p.GetPrim(),m)
+        return p
+    def box(name,center,scale,m):
+        p=UsdGeom.Cube.Define(stage,root+'/'+name)
+        p.CreateSizeAttr(1.)
+        p.AddTranslateOp().Set(Gf.Vec3d(*center)); p.AddScaleOp().Set(Gf.Vec3f(*scale))
+        bind(p.GetPrim(),m)
+        return p
+    # Original render meshes remain present but hidden; physical geometry stays intact.
+    for link in (BASE,'/LYH_LJR/left_wheel','/LYH_LJR/right_wheel'):
+        UsdGeom.Imageable(stage.GetPrimAtPath(link+'/visuals')).MakeInvisible()
+    for c in ('front_left','front_right','rear_left','rear_right'):
+        UsdGeom.Imageable(stage.GetPrimAtPath(BASE+'/collisions/caster_'+c)).MakeInvisible()
+    slab('LowerBumper',.474,.350,.09,.04,.068,'Rubber',True)
+    slab('SilverBody',.465,.340,.085,.068,.222,'Shell',True)
+    slab('UpperSeam',.466,.341,.086,.222,.228,'Trim')
+    # Rounded top deck with a genuine visual recess, no collision or sensor added.
+    ring=outline(.474,.349,.095); n=len(ring)
+    inner=[(.067*math.cos(math.atan2(y,x)),.067*math.sin(math.atan2(y,x))) for x,y in ring]
+    pts=[(x,y,.245) for x,y in ring]+[(x,y,.245) for x,y in inner]+[(x,y,.229) for x,y in ring]+[(x,y,.227) for x,y in inner]
+    faces=[]
+    for i in range(n):
+        j=(i+1)%n
+        faces.extend([(i,j,n+j,n+i),(i,2*n+i,2*n+j,j),(n+i,n+j,3*n+j,3*n+i)])
+    mesh('TopDeck',pts,faces,'Deck')
+    cylinder(root+'/CentralRecess',(0,0,.226),.067,.002,'Inset')
+    cylinder(root+'/RecessInner',(0,0,.227),.044,.002,'Trim')
+    for i in range(8):
+        a=i*math.pi/4
+        cylinder(root+'/DeckBolt%d'%i,(.105*math.cos(a),.105*math.sin(a),.246),.0038,.002,'Metal')
+    for i,(x,y) in enumerate(((-.29,-.22),(-.29,.22),(.29,-.22),(.29,.22))):
+        cylinder(root+'/MountBase%d'%i,(x,y,.247),.011,.004,'Trim')
+        cylinder(root+'/MountPin%d'%i,(x,y,.253),.005,.01,'Metal')
+    # Green strip follows the rounded front/rear corners, staying on the shell surface.
+    edge=outline(.466,.341,.085)
+    for sign,label in ((1,'Front'),(-1,'Rear')):
+        for sy,side in ((1,'Left'),(-1,'Right')):
+            segment=[(x,y) for x,y in edge if sign*x>.29 and sy*y>.15]
+            # Sort around center; strips cross neither the wheel arch nor the front panel.
+            segment.sort(key=lambda p: math.atan2(p[1],p[0]))
+            pts=[(x,y,z) for z in (.084,.091) for x,y in segment]; k=len(segment)
+            if k>1:
+                mesh(label+side+'StatusStrip',pts,[(i,i+1,k+i+1,k+i) for i in range(k-1)],'Green')
+    # Front face is +X; controls are decorative visual elements only.
+    box('FrontPanel',(.466,0,.118),(.005,.31,.083),'Trim')
+    box('SensorWindow',(.469,0,.128),(.003,.105,.042),'Glass')
+    box('SensorDivider',(.471,0,.128),(.003,.004,.042),'Trim')
+    cylinder(root+'/EmergencyBezel',(.471,.112,.117),.018,.008,'Inset','X')
+    cylinder(root+'/EmergencyButton',(.478,.112,.117),.012,.008,'Red','X')
+    box('FrontPort',(.470,-.116,.119),(.004,.036,.025),'Inset')
+    box('RearServicePanel',(-.466,0,.135),(.004,.21,.067),'Trim')
+    for i in range(7):
+        box('RearVent%d'%i,(-.469,-.066+i*.022,.136),(.003,.008,.036),'Inset')
+    # Wheel visual radius and centers match existing wheels, and inherit wheel rotation.
+    for side,sgn in (('left',1),('right',-1)):
+        wroot='/LYH_LJR/'+side+'_wheel/ReferenceWheelV30'
+        UsdGeom.Xform.Define(stage,wroot)
+        cylinder(wroot+'/Tire',(0,0,0),.08,.04,'Rubber','Y')
+        cylinder(wroot+'/Rim',(0,sgn*.0205,0),.052,.003,'Trim','Y')
+        cylinder(wroot+'/Hub',(0,sgn*.023,0),.019,.004,'Metal','Y')
+        for i in range(5):
+            a=i*2*math.pi/5
+            cylinder(wroot+'/Bolt%d'%i,(.031*math.cos(a),sgn*.023,.031*math.sin(a)),.0035,.003,'Metal','Y')
+    after=physics_snapshot(stage)
+    if before != after:
+        changed=[p for p in set(before)|set(after) if before.get(p)!=after.get(p)]
+        raise RuntimeError('Physics changed: '+repr(changed))
+    digest=hashlib.sha256(json.dumps(before,sort_keys=True).encode()).hexdigest()
+    print('[V30] PHYSICS_UNCHANGED entries=%d sha256=%s'%(len(before),digest),flush=True)
+    return root

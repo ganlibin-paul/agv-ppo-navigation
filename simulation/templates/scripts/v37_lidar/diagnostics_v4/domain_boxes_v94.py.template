@@ -1,0 +1,19 @@
+"""Static box layouts for training and independent frozen evaluation, never policy inputs."""
+import math
+
+def sample_layout(rng,n_boxes,family=None):
+    family=family or str(rng.choice(['aligned','staggered','wide_S'],p=[.25,.5,.25]))
+    widths=rng.uniform(.35,.75,n_boxes);depths=rng.uniform(.2,.6,n_boxes);heights=rng.uniform(.4,.85,n_boxes)
+    sign=1. if rng.rand()>.5 else -1.
+    if family=='aligned':
+        center=float(rng.uniform(-.25,.25));ys=[center+float(rng.uniform(-.05,.05)) for _ in range(n_boxes)];gap_bounds=(.6,2.5)
+    elif family=='staggered':
+        offset=float(rng.uniform(.1,.35));ys=[sign*(-1.)**i*offset+float(rng.uniform(-.04,.04)) for i in range(n_boxes)];gap_bounds=(1.5,3.)
+    else:
+        offset=float(rng.uniform(.42,.6));ys=[sign*(-1.)**i*offset+float(rng.uniform(-.03,.03)) for i in range(n_boxes)];gap_bounds=(2.3,3.5)
+    if n_boxes==1:ys=[float(rng.uniform(-.3,.3))]
+    x=float(rng.uniform(4.2,5.4));layout=[]
+    for i in range(n_boxes):
+        if i:x+=float((depths[i-1]+depths[i])/2+rng.uniform(*gap_bounds))
+        layout.append(dict(x=x,y=float(ys[i]),depth=float(depths[i]),width=float(widths[i]),height=float(heights[i])))
+    return layout,family

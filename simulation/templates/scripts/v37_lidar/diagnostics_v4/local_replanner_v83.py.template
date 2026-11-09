@@ -1,0 +1,151 @@
+"""Forward-only local SE(2) search from observed dual-lidar rays, simulation candidate."""
+import heapq
+import math
+import time
+import numpy as np
+
+
+def body_clearance(points, pose):
+    x,y,yaw=pose;c,s=math.cos(yaw),math.sin(yaw)
+    delta=points-[x,y]
+    lx=c*delta[:,0]+s*delta[:,1];ly=-s*delta[:,0]+c*delta[:,1]
+    qx=np.maximum(-.475-lx,lx-.5);qy=np.abs(ly)-.3515
+    return float((np.hypot(np.maximum(qx,0.),np.maximum(qy,0.))+np.minimum(np.maximum(qx,qy),0.)).min())
+
+
+class LocalReplanner(object):
+    def __init__(self):
+        self.status='NOT_PLANNED'
+        self.expansions=0
+        self.elapsed=0.
+        self.margin=.24
+        self.last_slice_seconds=0.;self.max_slice_seconds=0.;self.wall_seconds=0.
+
+    def start(self, raw_scans, points_base, target, observed_scans=()):
+        self.status='PLANNING';self.expansions=0;self.elapsed=0.
+        self.cpu_seconds=0.;self.last_slice_seconds=0.;self.max_slice_seconds=0.
+        self.wall_started=time.time();self.raster_seconds=0.;self.search_seconds=0.
+        self._job=self._search(raw_scans,points_base,target,observed_scans)
+
+    def advance(self):
+        self.slice_started=time.time()
+        result=next(self._job)
+        self.last_slice_seconds=time.time()-self.slice_started
+        self.cpu_seconds+=self.last_slice_seconds;self.elapsed=self.cpu_seconds
+        self.max_slice_seconds=max(self.max_slice_seconds,self.last_slice_seconds)
+        self.wall_seconds=time.time()-self.wall_started
+        if result is not None:
+            self._job.close();self._job=None
+        return result
+
+    def plan(self, raw_scans, points_base, target, observed_scans=()):
+        self.start(raw_scans,points_base,target,observed_scans)
+        result=None
+        while result is None:result=self.advance()
+        return result
+
+    def _search(self, raw_scans, points_base, target, observed_scans=()):
+        self.diagnostics={'bounds':0,'margin':0,'unknown':0,'merged':0,'accepted':0}
+        self.rejected_samples=[]
+        self.expansions=0;self.search_seconds=0.
+        occupied=[np.asarray(points_base).reshape(-1,2)]
+        free_cells=[]
+        resolution=.10
+        for scan_index,scan in enumerate(list(raw_scans)+list(observed_scans)):
+            ranges=np.asarray([np.nan if r is None else r for r in scan['ranges']],float)
+            ids=np.flatnonzero(np.isfinite(ranges)&(ranges>=scan['range_min'])&(ranges<=scan['range_max']))
+            ox,oy,heading=scan['origin']
+            angles=heading+scan['angle_min']+ids*scan['angle_increment']
+            distances=ranges[ids]
+            visible=distances<=3.5
+            if scan_index<len(raw_scans):occupied.append(np.column_stack((ox+distances[visible]*np.cos(angles[visible]),oy+distances[visible]*np.sin(angles[visible]))))
+            # No-return rays do not establish free space.
+            steps=np.arange(.025,3.501,.05)
+            valid=steps[None,:]<np.minimum(distances[:,None]-.025,3.5)
+            xx=ox+np.cos(angles[:,None])*steps[None,:]
+            yy=oy+np.sin(angles[:,None])*steps[None,:]
+            cells=np.floor(np.column_stack((xx[valid],yy[valid]))/resolution).astype(int)
+            free_cells.append(cells)
+            if time.time()-self.slice_started>=.015:yield None
+        points=np.concatenate(occupied)
+        if not len(points) or not free_cells:
+            self.status='INSUFFICIENT_OBSERVED_SPACE';self.elapsed=self.cpu_seconds+time.time()-self.slice_started
+            yield []
+            return
+        body=np.array([(x,y) for x in np.linspace(-.475,.5,6) for y in np.linspace(-.3515,.3515,5)])
+        own_volume=np.array([(x,y) for x in np.arange(-.475,.501,.05) for y in np.arange(-.3515,.3516,.05)])
+        free_cells.append(np.floor(own_volume/resolution).astype(int))
+        cells=np.concatenate(free_cells)
+        grid_origin=np.minimum(cells.min(axis=0),[-50,-50])
+        grid_shape=np.maximum(cells.max(axis=0)+1,[51,51])-grid_origin
+        free_grid=np.zeros(tuple(grid_shape),bool)
+        shifted=cells-grid_origin;free_grid[shifted[:,0],shifted[:,1]]=True
+        self.raster_seconds=self.cpu_seconds+time.time()-self.slice_started
+
+        if time.time()-self.slice_started>=.015:yield None
+        target=np.asarray(target,float)
+        self.target=target.tolist()
+        if body_clearance(points,target)<self.margin:
+            self.status='TARGET_BLOCKED';self.elapsed=self.cpu_seconds+time.time()-self.slice_started
+            yield []
+            return
+
+        # Continuous poses are checked; quantization only merges search states.
+        nodes=[(0.,0.,0.)];parents=[-1];costs=[0.]
+        keys={(0,0,0):0.}
+        queue=[(1.8*float(np.linalg.norm(target[:2])),0)]
+        primitives=[(.15,0.),(.15,-.25),(.15,.25),(0.,-.25),(0.,.25)]
+        found=None;self.expansions=0
+        while queue and self.expansions<2400:
+            if time.time()-self.slice_started>=.015:yield None
+            _,index=heapq.heappop(queue);x,y,yaw=nodes[index];cost=costs[index]
+            key=(int(round(x/.10)),int(round(y/.10)),int(round(yaw/.20)))
+            if cost>keys[key]+1e-8:continue
+            self.expansions+=1
+            angle_error=math.atan2(math.sin(yaw-target[2]),math.cos(yaw-target[2]))
+            if math.hypot(x-target[0],y-target[1])<.18 and abs(angle_error)<.25:
+                found=index;break
+            for v,w in primitives:
+                # Evaluate the same four swept poses together; coordinates stay continuous.
+                ticks=np.arange(1,5)*.20
+                pa=yaw+w*ticks;mid=yaw+w*(ticks-.10)
+                px=x+np.cumsum(.20*v*np.cos(mid));py=y+np.cumsum(.20*v*np.sin(mid))
+                if np.any(np.abs(px)>3.5) or np.any(np.abs(py)>2.5) or np.any(np.abs(pa)>math.pi):
+                    self.diagnostics['bounds']+=1;continue
+                c,sn=np.cos(pa),np.sin(pa)
+                dx=points[None,:,0]-px[:,None];dy=points[None,:,1]-py[:,None]
+                lx=c[:,None]*dx+sn[:,None]*dy;ly=-sn[:,None]*dx+c[:,None]*dy
+                qx=np.maximum(-.475-lx,lx-.5);qy=np.abs(ly)-.3515
+                gaps=(np.hypot(np.maximum(qx,0.),np.maximum(qy,0.))+np.minimum(np.maximum(qx,qy),0.)).min(axis=1)
+                minimum=float(gaps.min())
+                if minimum<self.margin:
+                    self.diagnostics['margin']+=1
+                    if len(self.rejected_samples)<30:
+                        i=int(np.argmin(gaps));self.rejected_samples.append({'reason':'margin','from':[x,y,yaw],'candidate':[float(px[i]),float(py[i]),float(pa[i])],'gap':minimum,'primitive':[v,w]})
+                    continue
+                fx=px[:,None]+c[:,None]*body[None,:,0]-sn[:,None]*body[None,:,1]
+                fy=py[:,None]+sn[:,None]*body[None,:,0]+c[:,None]*body[None,:,1]
+                indices=np.floor(np.stack((fx,fy),axis=-1)/resolution).astype(int)-grid_origin
+                known=free_grid[indices[:,:,0],indices[:,:,1]]
+                if not known.all():
+                    self.diagnostics['unknown']+=1
+                    if len(self.rejected_samples)<30:self.rejected_samples.append({'reason':'unknown','from':[x,y,yaw],'missing':indices[~known].tolist(),'primitive':[v,w]})
+                    continue
+                px,py,pa=float(px[-1]),float(py[-1]),float(pa[-1])
+                next_key=(int(round(px/.10)),int(round(py/.10)),int(round(pa/.20)))
+                next_cost=cost+(.12 if v else .065)+.02*abs(w)+.002/(minimum+.05)
+                if next_cost>=keys.get(next_key,float('inf')):self.diagnostics['merged']+=1;continue
+                self.diagnostics['accepted']+=1
+                keys[next_key]=next_cost;nodes.append((px,py,pa));parents.append(index);costs.append(next_cost)
+                heuristic=math.hypot(px-target[0],py-target[1])+.08*abs(math.atan2(math.sin(pa-target[2]),math.cos(pa-target[2])))
+                heapq.heappush(queue,(next_cost+1.8*heuristic,len(nodes)-1))
+        self.elapsed=self.cpu_seconds+time.time()-self.slice_started
+        self.search_seconds=self.elapsed-self.raster_seconds
+        if found is None:
+            self.status='SEARCH_LIMIT' if queue else 'NO_OBSERVED_FORWARD_ROUTE'
+            yield []
+            return
+        path=[]
+        while found>=0:path.append(nodes[found]);found=parents[found]
+        self.status='PATH_FOUND'
+        yield path[::-1]

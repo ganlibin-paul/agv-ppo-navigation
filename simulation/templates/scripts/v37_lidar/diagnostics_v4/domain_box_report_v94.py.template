@@ -1,0 +1,22 @@
+"""Summarize measured frozen-policy clearance; no claim of universal spacing feasibility."""
+import json
+from pathlib import Path
+
+def write_report(root):
+    root=Path(root);evaluation=json.loads((root/'evaluation.json').read_text());reports=evaluation['reports']
+    records=[]
+    for r in reports:
+        case=r['case'];layout=case['layout']
+        records.append(dict(name=case['name'],family=case['family'],box_count=len(layout),layout=layout,face_gaps_m=case['actual_face_gaps'],adjacent_edge_distances_m=case['adjacent_box_edge_distances'],result=r['result'],validation_passed=r['validation_passed'],contacts=r['contacts'],minimum_box_clearance_m=r.get('minimum_box_clearance'),minimum_wall_clearance_m=r.get('minimum_wall_clearance'),sim_seconds=r.get('sim_seconds'),actual_weave=r.get('actual_weave',False)))
+    summary=dict(completed=len(records),goal=sum(r['result']=='goal' for r in records),validated=sum(r['validation_passed'] for r in records),episodes_with_contact=sum(r['contacts']>0 for r in records),records=records,limit='Finite sampled layouts only. A failed gap is not proof of geometric impossibility. Contact-free alone is not successful navigation.')
+    (root/'clearance_summary.json').write_text(json.dumps(summary,indent=2),encoding='utf-8')
+    text='# Domain-randomized box avoidance: measured clearances\n\n'
+    text+='Completed %d; goal %d; validated %d; episodes with contact %d.\n\n'%(summary['completed'],summary['goal'],summary['validated'],summary['episodes_with_contact'])
+    text+='Distances are shortest distances between the rotated vehicle footprint and box edges or corridor walls, not lidar range or axle-center distance. Box face gap is longitudinal outside-face distance.\n\n'
+    text+='Only these sampled scenes were tested; no universal minimum feasible gap is established. Static boxes are resampled between episodes, not inserted suddenly during motion.\n\n'
+    text+='|Scene|Boxes|Face gaps (m)|Result|Validated|Min body-box (m)|Min body-wall (m)|Contacts|\n|---|---:|---|---|---|---:|---:|---:|\n'
+    for r in records:
+        box='unavailable' if r['minimum_box_clearance_m'] is None else '%.4f'%r['minimum_box_clearance_m']
+        wall='unavailable' if r['minimum_wall_clearance_m'] is None else '%.4f'%r['minimum_wall_clearance_m']
+        text+='|%s|%d|%s|%s|%s|%s|%s|%d|\n'%(r['name'],r['box_count'],','.join('%.2f'%q for q in r['face_gaps_m']),r['result'],r['validation_passed'],box,wall,r['contacts'])
+    (root/'clearance_report.md').write_text(text,encoding='utf-8')

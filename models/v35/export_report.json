@@ -1,0 +1,20 @@
+{
+  "model_sha256": "7dedcc064876c10fec1178d8136b416452db29b7a724f2da87b6cc3258553aed",
+  "actor_sha256": "61fda141d4f72cf4ceff017a23c973cce5f533f4c74602901e266d3b9a6d7573",
+  "architecture": [
+    164,
+    128,
+    128,
+    2
+  ],
+  "activations": [
+    "tanh",
+    "tanh",
+    "tanh"
+  ],
+  "rows": 1000,
+  "maximum_absolute_error": 2.980232238769531e-07,
+  "publish_enabled": false,
+  "real_rows": 205,
+  "real_maximum_absolute_error": 3.5762786865234375e-07
+}

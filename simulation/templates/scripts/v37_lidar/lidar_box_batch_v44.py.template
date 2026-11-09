@@ -1,0 +1,96 @@
+"""Vectorized 2-D lidar for the explicitly enumerated V38 box test scene.
+
+Not a general renderer or arbitrary USD scene query. Each primitive must be an
+axis-aligned box, except the vehicle body, which can have planar yaw. No pitch,
+roll, moving sensors while scan in flight, material response or mesh geometry.
+"""
+import math
+import numpy as np
+from lidar_v37 import MERGED_N, MERGED_MIN, MERGED_MAX, MERGED_INC, RANGE_MIN, RANGE_MAX, SENTINEL
+
+
+def rectangles(moving_xy,base_pose):
+    return [
+        ('FrontWall',3.49,1.30,.1,2.8,0.,0.,1.10),
+        ('BackWall',-2.92,0.,.1,5.8,0.,0.,1.10),
+        ('LeftWall',0.,2.75,6.8,.1,0.,0.,1.10),
+        ('RightWall',-1.15,-3.02,4.,.1,0.,0.,1.10),
+        ('FarOpening',8.40,-3.4,.1,6.6,0.,0.,1.10),
+        ('GroundBoard',1.35,1.10,.04,1.20,0.,0.,.20),
+        ('MovingObstacle',float(moving_xy[0]),float(moving_xy[1]),.20,.50,0.,0.,.70),
+        ('robot_body',float(base_pose[0]),float(base_pose[1]),.95,.703,float(base_pose[2]),.04,.29),
+    ]
+
+
+def trace(geo,pose,base_z,moving_xy):
+    n=geo.n_rays
+    angles=geo.angle_min+np.arange(n,dtype=np.float64)*geo.angle_increment+geo.yaw+pose[2]
+    dx,dy=np.cos(angles),np.sin(angles)
+    c,s=math.cos(pose[2]),math.sin(pose[2])
+    ox=pose[0]+c*geo.x-s*geo.y
+    oy=pose[1]+s*geo.x+c*geo.y
+    z=base_z+geo.z
+    best=np.full(n,geo.range_max,dtype=np.float64)
+    ids=np.full(n,-1,dtype=np.int16)
+    boxes=rectangles(moving_xy,pose)
+    for idx,(name,cx,cy,width,height,yaw,zlo,zhi) in enumerate(boxes):
+        if name=='robot_body': zlo+=base_z; zhi+=base_z
+        if not zlo<=z<=zhi: continue
+        cs,ss=math.cos(yaw),math.sin(yaw)
+        x0=cs*(ox-cx)+ss*(oy-cy); y0=-ss*(ox-cx)+cs*(oy-cy)
+        vx=cs*dx+ss*dy; vy=-ss*dx+cs*dy
+        with np.errstate(divide='ignore',invalid='ignore'):
+            tx1=(-width/2-x0)/vx; tx2=(width/2-x0)/vx
+            ty1=(-height/2-y0)/vy; ty2=(height/2-y0)/vy
+        # For rays exactly parallel to a slab, mark outside as impossible.
+        xparallel=np.abs(vx)<1.e-14; yparallel=np.abs(vy)<1.e-14
+        xlo=np.where(xparallel, -np.inf if abs(x0)<=width/2 else np.inf,np.minimum(tx1,tx2))
+        xhi=np.where(xparallel, np.inf if abs(x0)<=width/2 else -np.inf,np.maximum(tx1,tx2))
+        ylo=np.where(yparallel, -np.inf if abs(y0)<=height/2 else np.inf,np.minimum(ty1,ty2))
+        yhi=np.where(yparallel, np.inf if abs(y0)<=height/2 else -np.inf,np.maximum(ty1,ty2))
+        near=np.maximum(xlo,ylo); far=np.minimum(xhi,yhi)
+        distance=np.maximum(near,0.)
+        hit=(far>=distance)&(distance<best)
+        best=np.where(hit,distance,best); ids=np.where(hit,idx,ids)
+    self_id=len(boxes)-1
+    hit=(ids>=0)&(ids!=self_id)
+    raw=np.where(hit,best,np.nan)
+    x=ox+best[hit]*dx[hit]; y=oy+best[hit]*dy[hit]
+    bx=c*(x-pose[0])+s*(y-pose[1]); by=-s*(x-pose[0])+c*(y-pose[1])
+    counts={'hit':int(np.count_nonzero(hit)),'miss':int(np.count_nonzero(ids<0)),'self_occluded':int(np.count_nonzero(ids==self_id))}
+    return {'range':raw,'hit_xy':np.column_stack((bx,by)),'distance':best,'dx':dx,'dy':dy,'origin':(ox,oy,z),'ids':ids,'counts':counts}
+
+
+def merge(*hits):
+    points=np.concatenate([p for p in hits if len(p)],axis=0) if any(len(p) for p in hits) else np.empty((0,2))
+    r=np.hypot(points[:,0],points[:,1]); a=np.arctan2(points[:,1],points[:,0])
+    ok=np.isfinite(r)&(r>=RANGE_MIN)&(r<=RANGE_MAX)&(a>=MERGED_MIN)&(a<=MERGED_MAX)
+    r=r[ok]; a=a[ok]
+    idx=np.floor((a-MERGED_MIN)/MERGED_INC).astype(np.int32)
+    ok=(idx>=0)&(idx<MERGED_N)
+    result=np.full(MERGED_N,SENTINEL,dtype=np.float64)
+    np.minimum.at(result,idx[ok],r[ok])
+    return result
+
+
+def near_corner_indices(geo,pose,moving_xy,tolerance=.015):
+    """Indices near a box corner; query these with PhysX to resolve edge hits.
+
+    Planar box approximation may disagree close to tangency, especially when the
+    vehicle pitches. World geometry must remain the enumerated V38/V40 layout.
+    """
+    n=geo.n_rays
+    a=geo.angle_min+np.arange(n,dtype=np.float64)*geo.angle_increment+geo.yaw+pose[2]
+    c,s=math.cos(pose[2]),math.sin(pose[2])
+    ox=pose[0]+c*geo.x-s*geo.y; oy=pose[1]+s*geo.x+c*geo.y
+    selected=np.zeros(n,dtype=bool)
+    for name,cx,cy,width,height,yaw,zlo,zhi in rectangles(moving_xy,pose):
+        if name=='GroundBoard': continue
+        cs,ss=math.cos(yaw),math.sin(yaw)
+        for px in (-width/2,width/2):
+            for py in (-height/2,height/2):
+                x=cx+cs*px-ss*py; y=cy+ss*px+cs*py
+                corner=math.atan2(y-oy,x-ox)
+                diff=np.abs(np.arctan2(np.sin(a-corner),np.cos(a-corner)))
+                selected |= diff<tolerance
+    return np.flatnonzero(selected)

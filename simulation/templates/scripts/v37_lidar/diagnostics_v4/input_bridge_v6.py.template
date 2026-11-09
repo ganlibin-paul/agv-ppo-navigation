@@ -1,0 +1,36 @@
+"""Input bridge using the user-supplied reference encoder. No ROS outputs.
+Source fields must be passed explicitly; this module invents no L1 features.
+"""
+import numpy as np
+from model_codec_v10 import InputBridge
+
+META={
+ 'schema':'real_candidate_v6_reference_encoder',
+ 'scan':{'n_rays':1083,'angle_min':-3.14,'angle_max':3.14,'angle_increment':.0058,'range_min':.05,'range_max':50.,'sentinel':51.,'frame_id':'base_footprint'},
+ 'normalization':{'d_eff':3.,'max_v':1.5,'max_w':.58,'e_y_max':1.5,'ld_max':1.2,'kappa_max':2.},
+ 'normalization_evidence':{'max_v':'runtime task limit from provided v1.3; not idle rosparam',
+ 'max_w':'runtime max_min_v[4] from supplied v1.3',
+ 'remaining_scales':'v6 ey scale1.5 is a design change requiring the same real encoder; design candidates from supplied encoder, not all measured'},
+ 'history':'oldest to newest: a[t-2],a[t-1]',
+ 'missing':['L1 per-frame error/lookahead/reference outputs','motion-aligned raw scans','rear exact scan metadata','shield polygon semantics','time skew and odometry latency distribution'],
+ 'note':'Same dimension does not establish real deployment equivalence.'}
+
+
+def map_residual(alpha, previous, v_ref, w_ref, path_speed, dt, training_speed_cap=.3):
+ """Simulation mapper, not a deployed ROS command publisher.
+
+ path_speed: nonnegative active-segment speed ceiling, NOT v_ref or average
+ remaining-path speed. Current simulations supply a design placeholder 1.0;
+ the equivalent real task field is not yet established. dt is decision time
+ in seconds, not a repeated publisher tick. Wheel outputs drive Isaac joints
+ only; the real ROS command interface is Twist through its agreed mux input.
+ """
+ alpha=np.asarray(alpha,float)
+ if alpha.shape!=(2,) or not np.isfinite(alpha).all():raise ValueError('invalid action')
+ a=np.clip(alpha,-1,1)
+ # Positive direction only. Rear direction semantics are not established.
+ target=np.array([np.clip(v_ref+.4*a[0],0,min(1.5,abs(path_speed),training_speed_cap)),np.clip(w_ref+.2*a[1],-.58,.58)])
+ limits=np.array([.5,.285398])*dt
+ command=np.asarray(previous)+np.clip(target-previous,-limits,limits)
+ wheels=np.array([command[0]-.66/2*command[1],command[0]+.66/2*command[1]])/.08
+ return command,wheels

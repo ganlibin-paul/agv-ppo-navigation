@@ -1,0 +1,220 @@
+{
+  "runtime_baseline": "V85 historical onboard integration; V33 weights via V35 NumPy actor",
+  "simulation": "V94 training + V95 experimental paired controller test",
+  "files": [
+    {
+      "file": "runtime/shadow164_capture_v69.py",
+      "source_sha256": "2efc1c192382e6a770e81cf01bf780a52c03ee95ff518807e8bebd6e761bb964",
+      "modifications": []
+    },
+    {
+      "file": "runtime/raw_scan_fusion_v49.py",
+      "source_sha256": "c936c0e4f057c852e550d4ec433226909120f195c4354341cefec97631567a97",
+      "modifications": []
+    },
+    {
+      "file": "runtime/path_features_v10.py",
+      "source_sha256": "f7a5ee5a9e15eaa036164db7587db92441d3ed7ab04ef333e3918454289f9149",
+      "modifications": []
+    },
+    {
+      "file": "runtime/model_codec_v10.py",
+      "source_sha256": "8403e47fd7b00c7f576e47c133723bdf4d8f9c5e41b1543dce0120e29d72acae",
+      "modifications": []
+    },
+    {
+      "file": "runtime/takeover_adapter_v85.py",
+      "source_sha256": "4d0cd8d046ac52a25539395b9409e6ec613be4389949ec9bf61452a2a37865c8",
+      "modifications": []
+    },
+    {
+      "file": "runtime/policy_frame_v52.py",
+      "source_sha256": "176bae97911fe69d2f67b91acee50b184f72383e0a83513d91db7bab8a13ce03",
+      "modifications": []
+    },
+    {
+      "file": "runtime/action_filter_v63.py",
+      "source_sha256": "5b754bbfb547c7e8180dd0a2b23377454e8bbd2a2a092c6881cfc94c98bfe7c6",
+      "modifications": []
+    },
+    {
+      "file": "runtime/route_reference_v84.py",
+      "source_sha256": "cbcb9ed083333d9925f62d2ba2a744eb7e2ee083edfcbb32055f01803904c76a",
+      "modifications": []
+    },
+    {
+      "file": "runtime/local_replanner_v83.py",
+      "source_sha256": "8d24fd4d0509073e43fe5a65670f7bcceddf3c8f6bc46b15b0729889d760be1d",
+      "modifications": []
+    },
+    {
+      "file": "runtime/route_reference_v70.py",
+      "source_sha256": "b9380d8212bf9fd68c5582966fa3f1b0ce6105ed3740ff91f37f328fc6542858",
+      "modifications": []
+    },
+    {
+      "file": "runtime/scan_memory_v58.py",
+      "source_sha256": "b68741d2dd5f0d727b9629a7576bbeb6c6edb3d4db5ecdcfcb14393bd2011445",
+      "modifications": []
+    },
+    {
+      "file": "runtime/scan_memory_v51.py",
+      "source_sha256": "509f8ef43ee46a3a66a1ce12bafbcbc09144545e864d8527f85ab3f81fd21289",
+      "modifications": []
+    },
+    {
+      "file": "runtime/scan_action_projection_v51.py",
+      "source_sha256": "42814256888017497f6f9bb2d75f7a01f87db912e536e119e02506997ed1a763",
+      "modifications": []
+    },
+    {
+      "file": "runtime/input_bridge_v6.py",
+      "source_sha256": "4adb49356a5a0f1117a84a72dd88c5eafedc024edbdc1da24b668154a15970b9",
+      "modifications": []
+    },
+    {
+      "file": "runtime/manual_takeover_gate_v43.py",
+      "source_sha256": "27bcd25174b2297ff69bb4f4e8a60b11d80f75c1dbe5d28651ecd011bae528d3",
+      "modifications": []
+    },
+    {
+      "file": "runtime/numpy_actor_v35.py",
+      "source_sha256": "e243aa78c99e6ab41d3e4e96df903abf1f12f87cf74ba3b1ad970bb7ccf2dd12",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/route_reference_v95.py.template",
+      "source_sha256": "053357904d299e4445eef0eadf4d7e6d8b797119268989b61f27998ec3f51bec",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/observed_route_planner_v95.py.template",
+      "source_sha256": "2ec5922205a56425124a8b69981bc7c890f572841e8c0c1667add402e8c547fc",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/local_replanner_v83.py.template",
+      "source_sha256": "8d24fd4d0509073e43fe5a65670f7bcceddf3c8f6bc46b15b0729889d760be1d",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/static_route_v88.py.template",
+      "source_sha256": "493ea5ea595e9963b8423f2be04f90076b1d098aa474f73cebb548eee3ffe126",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/path_features_v10.py.template",
+      "source_sha256": "f7a5ee5a9e15eaa036164db7587db92441d3ed7ab04ef333e3918454289f9149",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/evaluate_route_fix_v95.py.template",
+      "source_sha256": "710ae3c644d76f8e304b0a18dbbf33676d2316b0fcdab3f4b86430b2edaed483",
+      "modifications": [
+        "site-specific paths replaced with explicit render parameters"
+      ]
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/domain_box_report_v94.py.template",
+      "source_sha256": "d354025eb3bd8c06399b9fd014acb34334fff865c3fca75b020572f518dca799",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/scan_memory_v88.py.template",
+      "source_sha256": "7298428d65997b827057b635e05680975cfa0a8d1c34d8c5af6fd1848c50df00",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/scan_memory_base_v88.py.template",
+      "source_sha256": "831c0c5a3ed6167e22b09df88a19d0cc63b8ed0979271b3dadaecd98a1b4ea62",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/action_filter_v63.py.template",
+      "source_sha256": "5b754bbfb547c7e8180dd0a2b23377454e8bbd2a2a092c6881cfc94c98bfe7c6",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/policy_frame_v52.py.template",
+      "source_sha256": "176bae97911fe69d2f67b91acee50b184f72383e0a83513d91db7bab8a13ce03",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/model_codec_v10.py.template",
+      "source_sha256": "8403e47fd7b00c7f576e47c133723bdf4d8f9c5e41b1543dce0120e29d72acae",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/domain_boxes_v94.py.template",
+      "source_sha256": "49eb3cdbba1f638eb2602014f8065d708465ef4c28c5e6e16ce41442493f2a5b",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/clearance_v48.py.template",
+      "source_sha256": "2ee88ab1371ac132136834b096fad6134e0c0757ddc87d08abfb3bd37bacab6d",
+      "modifications": [
+        "trim empty lines at EOF"
+      ]
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/reward_night_v87.py.template",
+      "source_sha256": "538ace02bc34b073f00c0f0e9672e8ba67ee0ab2d12b29d7684938e8e5cbd15a",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/route_reference_v93.py.template",
+      "source_sha256": "d34b239b48b7ac3f857650d7e4626b65c6ccbae49d38de77511bb54394eaf551",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/observed_route_planner_v93.py.template",
+      "source_sha256": "48814221d7ec5fb26bbd52a44f382e478f9a919cca66b031274ded7ecc08451b",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/scan_action_projection_v90.py.template",
+      "source_sha256": "403e3e1de7499f37aace71d53c90a5e4460ca194e43e3631ab0162bcbd1fbcb3",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/diagnostics_v4/input_bridge_v6.py.template",
+      "source_sha256": "4adb49356a5a0f1117a84a72dd88c5eafedc024edbdc1da24b668154a15970b9",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/lidar_v37.py.template",
+      "source_sha256": "0ba3c649ccb47158ac888c99e2d81a326c97961d8af618e237678d714f4267a0",
+      "modifications": []
+    },
+    {
+      "file": "simulation/templates/scripts/v37_lidar/lidar_box_batch_v44.py.template",
+      "source_sha256": "2db863caf5ad465206f105308dc3c0d6bfd8141cac17428765854b5a5acc8c89",
+      "modifications": [
+        "trim empty lines at EOF"
+      ]
+    },
+    {
+      "file": "simulation/templates/scripts/reference_skin_v30.py.template",
+      "source_sha256": "c6c441e3ac2e5e07ba707f3cf28cd83c79675f52e99244200c92eea545d7c2e6",
+      "modifications": [
+        "trim empty lines at EOF"
+      ]
+    },
+    {
+      "file": "simulation/templates/scripts/train_domain_boxes_v94.py.template",
+      "source_sha256": "ef6fc76202d72cb2cfffaa42a871b31fac683188531b4fee3dbb9ef7160f5ccd",
+      "modifications": [
+        "site-specific paths replaced with explicit render parameters"
+      ]
+    }
+  ],
+  "publication_wrapper": {
+    "file": "runtime/run_agv.py",
+    "changes": [
+      "explicit model directory,output directory and front-x argument",
+      "same Python interpreter for subprocesses",
+      "capture terminated when adapter exits",
+      "velocity publisher remains disabled unless --enable-motion"
+    ]
+  }
+}

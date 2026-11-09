@@ -1,0 +1,28 @@
+"""Reuse the frozen policy in a consistent left/right reflected coordinate frame.
+The codec implementation is inherited unchanged; shield geometry stays physical.
+"""
+import numpy as np
+from model_codec_v10 import InputBridge
+
+
+class PolicyFrame(InputBridge):
+    def __init__(self):
+        InputBridge.__init__(self)
+        self.side=1.
+
+    def set_side(self, side):
+        if side==self.side:return
+        self.angles=-self.angles
+        self._bins=np.clip(np.floor((self.angles+3.14)/(6.28+1e-12)*72).astype(int),0,71)
+        self._hist=[value if i%2==0 else -value for i,value in enumerate(self._hist)]
+        self.side=side
+
+    def push_action(self, action):
+        InputBridge.push_action(self,[action[0],self.side*action[1]])
+
+    def encode(self,ranges,e_y,e_psi,kappa,ld,progress,direction,v_ref,w_ref,v_meas,w_meas,stamp_skew):
+        return InputBridge.encode(self,ranges,self.side*e_y,self.side*e_psi,self.side*kappa,ld,progress,direction,
+            v_ref,self.side*w_ref,v_meas,self.side*w_meas,stamp_skew)
+
+    def physical_action(self, action):
+        return np.array([action[0],self.side*action[1]])

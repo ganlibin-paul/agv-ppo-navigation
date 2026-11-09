@@ -1,0 +1,776 @@
+"""V44 dual-lidar candidate and measured-distance scene.
+
+Runs only in Isaac Sim; original v24 USD is not saved. Physical-world query,
+not an official RTX lidar sensor or a published ROS LaserScan.
+"""
+import asyncio
+import json
+import math
+import os
+import sys
+import time
+import traceback
+import numpy as np
+import omni.kit.app
+import omni.usd
+import omni.physx
+import omni.timeline
+from pxr import Gf, Sdf, UsdGeom, UsdLux, UsdPhysics, UsdShade, Vt
+from omni.isaac.core import World
+from omni.isaac.core.articulations import Articulation
+from omni.isaac.core.prims import RigidPrimView
+from omni.isaac.core.utils.types import ArticulationAction
+from omni.isaac.core.utils.viewports import set_camera_view
+
+sys.path.insert(0,'__PROJECT_ROOT__/scripts')
+sys.path.insert(0,'__PROJECT_ROOT__/scripts/v37_lidar')
+from reference_skin_v30 import build_skin
+import lidar_box_batch_v44 as batch
+from lidar_v37 import FRONT,BACK,MERGED_N,MERGED_MIN,MERGED_MAX,MERGED_INC,RANGE_MIN,RANGE_MAX,SENTINEL,sensor_ray,world_point_to_base,merge_hits,validity,sectors
+
+SCENE_BOXES=[]
+BASE='/LYH_LJR/base_footprint'
+USD='__ROBOT_USD__'
+T='[PPO_ROUTE_AB_V95]'
+
+def log(*v): print(T,*v,flush=True)
+
+def mat(stage,name,c,emit=False):
+    m=UsdShade.Material.Define(stage,'/World/V44Materials/'+name)
+    s=UsdShade.Shader.Define(stage,str(m.GetPath())+'/Surface')
+    s.CreateIdAttr('UsdPreviewSurface')
+    s.CreateInput('diffuseColor',Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*c))
+    s.CreateInput('roughness',Sdf.ValueTypeNames.Float).Set(.65)
+    if emit: s.CreateInput('emissiveColor',Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*c))
+    m.CreateSurfaceOutput().ConnectToSource(s.ConnectableAPI(),'surface')
+    return m
+
+def bind(prim,m): UsdShade.MaterialBindingAPI.Apply(prim).Bind(m)
+
+def box(stage,name,pos,scale,m,move=False):
+    SCENE_BOXES.append((name,pos[0],pos[1],scale[0],scale[1],0.,pos[2]-scale[2]/2,pos[2]+scale[2]/2))
+    path='/World/V44Scene/'+name
+    g=UsdGeom.Cube.Define(stage,path); g.CreateSizeAttr(1.)
+    g.AddTranslateOp().Set(Gf.Vec3d(*pos)); g.AddScaleOp().Set(Gf.Vec3f(*scale))
+    UsdPhysics.CollisionAPI.Apply(g.GetPrim())
+    if move:
+        UsdPhysics.RigidBodyAPI.Apply(g.GetPrim()).CreateKinematicEnabledAttr(True)
+        UsdPhysics.MassAPI.Apply(g.GetPrim()).CreateMassAttr(1.)
+    bind(g.GetPrim(),m)
+    return path
+
+def marker(stage,name,geo,m):
+    prim=UsdGeom.Sphere.Define(stage,BASE+'/V44Visual/'+name); prim.CreateRadiusAttr(.035)
+    prim.AddTranslateOp().Set(Gf.Vec3d(geo.x,geo.y,geo.z)); bind(prim.GetPrim(),m)
+
+def rays_mesh(stage,name,m):
+    g=UsdGeom.Mesh.Define(stage,'/World/V44Debug/'+name)
+    g.CreateSubdivisionSchemeAttr('none'); g.CreateDoubleSidedAttr(True); bind(g.GetPrim(),m)
+    return g
+
+def read_pose(view):
+    p,q=view.get_world_poses(); p=np.asarray(p)[0]; w,x,y,z=np.asarray(q)[0]
+    if abs(float(x))>.02 or abs(float(y))>.02: raise RuntimeError('box raycaster requires near-planar vehicle pose')
+    return (float(p[0]),float(p[1]),float(math.atan2(2*(w*z+x*y),1-2*(y*y+z*z)))),float(p[2])
+
+def cast(query,geo,pose,base_z,mesh):
+    raw=[]; base_hits=[]; raw_types={'hit':0,'miss':0,'self_occluded':0}; verts=[]
+    for i in range(geo.n_rays):
+        origin,direction=sensor_ray(geo,i,pose)
+        origin=(origin[0],origin[1],origin[2]+base_z)
+        hit=query.raycast_closest(Gf.Vec3f(*origin),Gf.Vec3f(*direction),geo.range_max)
+        length=5.0; value=None
+        if hit.get('hit',False):
+            path=str(hit.get('rigidBody',hit.get('collision','')))
+            if path.startswith('/LYH_LJR'):
+                raw_types['self_occluded']+=1
+                length=min(length,float(hit['distance']))
+            else:
+                value=float(hit['distance']); raw_types['hit']+=1
+                length=min(length,value)
+                p=hit['position']; base_hits.append(world_point_to_base(pose,(float(p[0]),float(p[1]))))
+        else: raw_types['miss']+=1
+        raw.append(value) # null is a synthetic no-return representation, not claimed real data
+        if i%40==0:
+            w=.006; dx,dy=direction[:2]; px,py=-dy*w,dx*w
+            sx,sy,sz=origin; ex=sx+length*dx; ey=sy+length*dy; z=sz+.006
+            verts.extend([Gf.Vec3f(sx+px,sy+py,z),Gf.Vec3f(sx-px,sy-py,z),Gf.Vec3f(ex-px,ey-py,z),Gf.Vec3f(ex+px,ey+py,z)])
+    mesh.CreateFaceVertexCountsAttr([4]*(len(verts)//4))
+    mesh.CreateFaceVertexIndicesAttr(list(range(len(verts))))
+    mesh.CreatePointsAttr(Vt.Vec3fArray(verts))
+    return {'frame_id':geo.frame_id,'angle_min':geo.angle_min,'angle_max':geo.angle_max,'angle_increment':geo.angle_increment,'range_min':geo.range_min,'range_max':geo.range_max,'ranges':raw,'counts':raw_types},base_hits
+
+def fast_cast(query,geo,pose,bz,moving_xy,mesh,update_display=True):
+    data=batch.trace(geo,pose,bz,moving_xy)
+    # Re-check corner/tangent rays with PhysX. Empty/self classifications are
+    # resolved from the actual collision query rather than a planar approximation.
+    ox,oy,oz=data['origin']
+    for i in batch.near_corner_indices(geo,pose,moving_xy):
+        dx=float(data['dx'][i]); dy=float(data['dy'][i])
+        hit=query.raycast_closest(Gf.Vec3f(ox,oy,oz),Gf.Vec3f(dx,dy,0.),geo.range_max)
+        if not hit.get('hit',False):
+            data['ids'][i]=-1; data['distance'][i]=geo.range_max; data['range'][i]=np.nan
+        else:
+            path=str(hit.get('rigidBody',hit.get('collision','')))
+            data['distance'][i]=float(hit['distance'])
+            if path.startswith('/LYH_LJR'):
+                data['ids'][i]=len(batch.rectangles(moving_xy,pose))-1; data['range'][i]=np.nan
+            else:
+                data['ids'][i]=0; data['range'][i]=float(hit['distance'])
+    valid=np.isfinite(data['range'])
+    px=ox+data['distance'][valid]*data['dx'][valid]; py=oy+data['distance'][valid]*data['dy'][valid]
+    cs,ss=math.cos(pose[2]),math.sin(pose[2]); ddx=px-pose[0]; ddy=py-pose[1]
+    data['hit_xy']=np.column_stack((cs*ddx+ss*ddy,-ss*ddx+cs*ddy))
+    self_id=len(batch.rectangles(moving_xy,pose))-1
+    data['counts']={'hit':int(np.count_nonzero(valid)),'miss':int(np.count_nonzero(data['ids']<0)),'self_occluded':int(np.count_nonzero(data['ids']==self_id))}
+    vals=data['range']; indices=data['ids']; lengths=data['distance']
+    ox,oy,oz=data['origin']; verts=[]
+    for i in range(0,geo.n_rays,40):
+        dx=float(data['dx'][i]); dy=float(data['dy'][i]); dist=min(5.,float(lengths[i]))
+        w=.006; px=-dy*w; py=dx*w; ex=ox+dist*dx; ey=oy+dist*dy; z=oz+.006
+        verts.extend([Gf.Vec3f(ox+px,oy+py,z),Gf.Vec3f(ox-px,oy-py,z),Gf.Vec3f(ex-px,ey-py,z),Gf.Vec3f(ex+px,ey+py,z)])
+    if update_display:
+        mesh.CreateFaceVertexCountsAttr([4]*(len(verts)//4)); mesh.CreateFaceVertexIndicesAttr(list(range(len(verts)))); mesh.CreatePointsAttr(Vt.Vec3fArray(verts))
+    raw=[float(x) if np.isfinite(x) else None for x in vals]
+    record={'frame_id':geo.frame_id,'angle_min':geo.angle_min,'angle_max':geo.angle_max,'angle_increment':geo.angle_increment,'range_min':geo.range_min,'range_max':geo.range_max,'ranges':raw,'counts':data['counts']}
+    return record,data['hit_xy']
+
+
+def compare_fast_with_physx(query,geo,pose,bz,moving_xy,mesh):
+    reference,_=cast(query,geo,pose,bz,mesh)
+    accelerated,_=fast_cast(query,geo,pose,bz,moving_xy,mesh)
+    missing=0; differences=[]; mismatch_indices=[]
+    for i,(a,b) in enumerate(zip(reference['ranges'],accelerated['ranges'])):
+        if (a is None)!=(b is None):
+            missing+=1; mismatch_indices.append(i)
+        elif a is not None:
+            differences.append(abs(a-b))
+    max_error=max(differences) if differences else 0.
+    log('PHYSX_COMPARE',geo.frame_id,'rays=',geo.n_rays,'visibility_mismatch=',missing,'max_distance_error=',round(max_error,6),'examples=',mismatch_indices[:8])
+    if missing!=0 or max_error>.003:
+        raise RuntimeError('batch raycaster mismatch; refusing to use for this scene')
+
+
+def draw_line(mesh,positions,width=.018):
+    verts=[]
+    for (x0,y0),(x1,y1) in zip(positions,positions[1:]):
+        dx=x1-x0; dy=y1-y0; length=math.hypot(dx,dy)
+        if length<1e-7: continue
+        px=-dy/length*width; py=dx/length*width; z=.055
+        verts.extend([Gf.Vec3f(x0+px,y0+py,z),Gf.Vec3f(x0-px,y0-py,z),Gf.Vec3f(x1-px,y1-py,z),Gf.Vec3f(x1+px,y1+py,z)])
+    mesh.CreateFaceVertexCountsAttr([4]*(len(verts)//4)); mesh.CreateFaceVertexIndicesAttr(list(range(len(verts)))); mesh.CreatePointsAttr(Vt.Vec3fArray(verts))
+
+
+def direct(query,origin,direction):
+    return query.raycast_closest(Gf.Vec3f(*origin),Gf.Vec3f(*direction),50.)
+
+def assert_face(query,name,origin,direction,axis,expected):
+    hit=direct(query,origin,direction)
+    if not hit.get('hit',False) or name not in str(hit.get('collision','')):
+        raise RuntimeError('expected %s; got %s'%(name,hit))
+    pos=hit['position']; error=abs(float(pos[axis])-expected)
+    if error>.025: raise RuntimeError('%s face error %.4f'%(name,error))
+    log('CHECK',name,'surface=',round(float(pos[axis]),4),'error=',round(error,4))
+
+async def main():
+    app=omni.kit.app.get_app()
+    from pxr import Usd
+    from isaacsim.core.cloner import Cloner
+    from omni.isaac.core.articulations import ArticulationView
+    import queue,threading
+    sys.path.insert(0,'__PROJECT_ROOT__/scripts/v37_lidar/diagnostics_v4')
+    from input_bridge_v6 import InputBridge,map_residual,META
+    from scan_action_projection_v90 import select_action
+    from route_reference_v93 import RouteReference, META as REFERENCE_META
+    from route_reference_v95 import RouteReference as FixedRouteReference
+    from reward_night_v87 import RewardState,transition_reward
+    from clearance_v48 import clearance,polygon,separation
+    from domain_boxes_v94 import sample_layout
+    from policy_frame_v52 import PolicyFrame
+    from action_filter_v63 import AngularActionFilter
+    from scan_memory_v88 import ScanObstacleMemory
+    count=16; root='__PROJECT_ROOT__/logs/evaluate_route_fix_v95_'+time.strftime('%Y%m%d_%H%M%S')
+    os.makedirs(root)
+    try:
+        for _ in range(90):await app.next_update_async()
+        started=time.perf_counter()
+        if World.instance() is not None:World.clear_instance()
+        ctx=omni.usd.get_context(); ok=await ctx.open_stage_async(USD); stage=ctx.get_stage()
+        if not ok[0] or not stage.GetPrimAtPath(BASE).IsValid(): raise RuntimeError('USD stage missing')
+        for path in (BASE,'/LYH_LJR/left_wheel','/LYH_LJR/right_wheel'): stage.GetPrimAtPath(path+'/visuals').SetInstanceable(False)
+        build_skin(stage)
+        front=UsdGeom.Cube.Define(stage,BASE+'/front_extent_v48')
+        front.CreateSizeAttr(1.)
+        front.AddTranslateOp().Set(Gf.Vec3d(.4875,0.,.165))
+        front.AddScaleOp().Set(Gf.Vec3f(.025,.703,.25))
+        UsdPhysics.CollisionAPI.Apply(front.GetPrim())
+        old=stage.GetPrimAtPath('/Environment/defaultLight')
+        if old.IsValid(): old.GetAttribute('inputs:intensity').Set(0.)
+        UsdLux.DomeLight.Define(stage,'/World/V44Lights/Dome').CreateIntensityAttr(350.)
+        sun=UsdLux.DistantLight.Define(stage,'/World/V44Lights/Sun'); sun.CreateIntensityAttr(850.)
+        UsdGeom.Xformable(sun.GetPrim()).AddRotateXYZOp().Set(Gf.Vec3f(-50.,0.,35.))
+        cyan=mat(stage,'Front',(0.01,.55,.85),True); amber=mat(stage,'Back',(.9,.35,.01),True)
+        grey=mat(stage,'Wall',(.35,.41,.46)); red=mat(stage,'Moving',(.75,.12,.08)); green=mat(stage,'Board',(.18,.55,.22)); path_mat=mat(stage,'ReferencePath',(.04,1.8,.04),True); trail_mat=mat(stage,'OdomTrail',(1.8,.02,1.4),True)
+        marker(stage,'Front',FRONT,cyan); marker(stage,'Back',BACK,amber)
+        fm=rays_mesh(stage,'FrontRays',cyan); bm=rays_mesh(stage,'BackRays',amber)
+        path_mesh=rays_mesh(stage,'ReferencePath',path_mat); trail_mesh=rays_mesh(stage,'OdomTrail',trail_mat)
+        draw_line(path_mesh,[(1.6199712536517838,0.),(15.2,0.)],width=.012)
+        # Faces approximately reproduce stated cardinal ranges; large front-right opening is illustrative.
+        box(stage,'FrontWall',(18.49,1.30,.55),(.1,2.8,1.10),grey) # face x=3.44, y=-.10..2.70
+        box(stage,'BackWall',(-2.92,0.,.55),(.1,5.8,1.10),grey) # face x=-2.87
+        box(stage,'LeftWall',(0.,2.75,.55),(6.8,.1,1.10),grey) # face y=2.70
+        box(stage,'RightWall',(-1.15,-3.02,.55),(4.0,.1,1.10),grey) # face y=-2.97, opens beyond x=.85
+        box(stage,'FarOpening',(19.40,-3.4,.55),(.1,6.6,1.10),grey) # approximate opening, face x=8.35
+        # 1.2m x .2m upright on ground. Laser plane z=.22 is above its top.
+        box(stage,'GroundBoard',(1.35,1.10,.10),(.04,1.20,.20),green)
+        box(stage,'TrainCorridorLeft',(8.,2.05,.55),(20.,.1,1.10),grey)
+        box(stage,'TrainCorridorRight',(8.,-2.05,.55),(20.,.1,1.10),grey)
+        box(stage,'ThirdObstacle',(30.,0.,.29),(.3,.6,.58),red)
+        UsdPhysics.CollisionAPI(stage.GetPrimAtPath('/World/V44Scene/ThirdObstacle')).CreateCollisionEnabledAttr(False)
+        box(stage,'SecondObstacle',(30.,0.,.29),(.20,.50,.58),red)
+        UsdPhysics.CollisionAPI(stage.GetPrimAtPath('/World/V44Scene/SecondObstacle')).CreateCollisionEnabledAttr(False)
+        box(stage,'DepartingPedestrian',(30.,0.,.8),(.30,.30,1.60),grey,True)
+        stage.GetPrimAtPath('/World/V44Scene/DepartingPedestrian').GetAttribute('visibility').Set('invisible')
+        UsdPhysics.CollisionAPI(stage.GetPrimAtPath('/World/V44Scene/DepartingPedestrian')).CreateCollisionEnabledAttr(False)
+        moving_path=box(stage,'MovingObstacle',(6.8,0.,.29),(.20,.50,.58),red,True)
+        from omni.kit import commands as kit_commands
+        UsdGeom.Xform.Define(stage,'/World/envs')
+        UsdGeom.Xform.Define(stage,'/World/envs/env_0')
+        kit_commands.execute('MovePrim',path_from='/LYH_LJR',path_to='/World/envs/env_0/Robot')
+        kit_commands.execute('MovePrim',path_from='/World/V44Scene',path_to='/World/envs/env_0/Scene')
+        from pxr import PhysxSchema, PhysicsSchemaTools
+        for prim in stage.Traverse():
+            if str(prim.GetPath()).startswith('/World/envs/env_0/Robot') and prim.HasAPI(UsdPhysics.RigidBodyAPI):
+                PhysxSchema.PhysxContactReportAPI.Apply(prim).CreateThresholdAttr(0.)
+        cloner=Cloner();cloner.define_base_env('/World/envs')
+        paths=cloner.generate_paths('/World/envs/env',count)
+        origins=np.array([[120.*(i%8),120.*(i//8),0.] for i in range(count)],dtype=np.float32)
+        cloner.clone(source_prim_path=paths[0],prim_paths=paths,positions=origins,replicate_physics=False,copy_from_source=True)
+        world=World(stage_units_in_meters=1.0);await world.initialize_simulation_context_async()
+        globals_=[str(p.GetPath()) for p in stage.Traverse() if p.HasAPI(UsdPhysics.CollisionAPI) and not str(p.GetPath()).startswith('/World/envs')]
+        cloner.filter_collisions(world.get_physics_context().prim_path,'/World/CloneFilters',paths,globals_)
+        robots=world.scene.add(ArticulationView(prim_paths_expr='/World/envs/env_.*/Robot',name='robots'))
+        bases=world.scene.add(RigidPrimView(prim_paths_expr='/World/envs/env_.*/Robot/base_footprint',name='bases'))
+        contact_pairs=[]
+        def on_contact(headers,data):
+            for h in headers:
+                a=str(PhysicsSchemaTools.intToSdfPath(h.actor0));b=str(PhysicsSchemaTools.intToSdfPath(h.actor1))
+                if '/Scene/' in a or '/Scene/' in b:contact_pairs.append((a,b))
+        contact_subscription=omni.physx.get_physx_simulation_interface().subscribe_contact_report_events(on_contact)
+        await world.reset_async()
+        assert robots.count==count and bases.count==count,(robots.count,bases.count,count)
+        names=list(robots.dof_names);idx=np.array([names.index('joint_left_wheel_link'),names.index('joint_right_wheel_link')])
+        zero=np.zeros((count,2));robots.set_joint_velocity_targets(zero,joint_indices=idx)
+        timeline=omni.timeline.get_timeline_interface();timeline.play()
+        for _ in range(30):await app.next_update_async()
+        timeline.pause()
+        pp,qq=bases.get_world_poses();pp=np.asarray(pp);qq=np.asarray(qq)
+        # Match physical instances to spatial origins rather than relying on lexical order.
+        env_ids=np.array([int(np.argmin(np.linalg.norm(origins[:,:2]-v[:2],axis=1))) for v in pp])
+        assert len(set(env_ids))==count
+        assert np.max(np.linalg.norm(pp[:,:2]-origins[env_ids,:2],axis=1))<.01
+        query=omni.physx.get_physx_scene_query_interface()
+        checks=[]
+        for k,pos in enumerate(pp):
+            hit=direct(query,(float(pos[0]+FRONT.x),float(pos[1]+FRONT.y),float(pos[2]+FRONT.z)),(1,0,0))
+            expected=paths[env_ids[k]]+'/Scene/MovingObstacle'
+            assert str(hit.get('collision',''))==expected,(expected,hit)
+            checks.append(abs(float(hit['distance'])-(6.7-FRONT.x)))
+        set_camera_view(eye=np.array([9.,-9.,9.]),target=np.array([3.,0.,.1]),camera_prim_path='/OmniverseKit_Persp')
+        # Independent reset: perturb exactly one articulation and verify the others remain in place.
+        before=np.asarray(robots.get_world_poses()[0]).copy()
+        target=before[[0]].copy();target[0,1]+=.2
+        robots.set_world_poses(positions=target,indices=np.array([0]))
+        robots.set_velocities(np.zeros((1,6)),indices=np.array([0]))
+        timeline.play()
+        for _ in range(6):await app.next_update_async()
+        timeline.pause()
+        after=np.asarray(robots.get_world_poses()[0])
+        assert abs(after[0,1]-target[0,1])<.015,('reset',after[0],target[0])
+        if count>1:assert np.max(np.linalg.norm(after[1:,:2]-before[1:,:2],axis=1))<.01
+        touched=before[[0]].copy();touched[0,0]+=6.25
+        contact_pairs.clear()
+        robots.set_world_poses(positions=touched,indices=np.array([0]))
+        timeline.play()
+        for _ in range(12):await app.next_update_async()
+        timeline.pause()
+        assert contact_pairs, 'contact callbacks absent'
+        expected_prefix=paths[env_ids[0]]+'/'
+        assert all(a.startswith(expected_prefix) and b.startswith(expected_prefix) for a,b in contact_pairs),('contact isolation',contact_pairs[:3])
+        robots.set_world_poses(positions=before[[0]],indices=np.array([0]))
+        robots.set_velocities(np.zeros((1,6)),indices=np.array([0]))
+        await world.reset_async();robots.set_joint_velocity_targets(zero,joint_indices=idx)
+        timeline.pause()
+        async def physics_steps(n):
+            timeline.play();start=float(world.current_time)
+            while float(world.current_time)<start+n/60.-1e-6:await app.next_update_async()
+            timeline.pause()
+        config={'n_envs':count,'total_training_steps':4096,'max_evaluation_decisions_per_case':1800,'policy_dt':.1,'inputs':META,
+                'path_proxy':'analytic straight segment; actual L1 stream unavailable',
+                'reference_provider':REFERENCE_META,
+                'reference_w_proxy':'endpoint-clamped pure pursuit and goal heading; candidate, not actual L1',
+                'speed_cap':.4,'goal':[15.2,0.,0.],'scanner':'full PhysX 2x1440; merged1083; no injected false coverage mask',
+                'algorithm':'PPO V12 avoidance-only completion; alternate full and saved pre-stall starts; independent full-route evaluation after training',
+                'scope':'experimental PPO; proxy L1, candidate ey scale1.5, uncalibrated real dynamics'}
+        with open(root+'/config.json','w') as f:json.dump(config,f,indent=2)
+        requests=queue.Queue();responses=queue.Queue()
+        def worker():
+            try:
+                import gymnasium as gym
+                import torch
+                from stable_baselines3 import PPO
+                from stable_baselines3.common.vec_env import VecEnv
+                from stable_baselines3.common.callbacks import BaseCallback
+                from stable_baselines3.common.logger import configure
+                torch.set_num_threads(2)
+                class ParallelEnv(VecEnv):
+                    def __init__(self):super().__init__(count,gym.spaces.Box(-np.inf,np.inf,(164,),np.float32),gym.spaces.Box(-1.,1.,(2,),np.float32))
+                    def call(self,op,value=None):
+                        requests.put((op,value));result=responses.get(timeout=300)
+                        if isinstance(result,Exception):raise result
+                        return result
+                    def reset(self):return self.call('reset')
+                    def step_async(self,actions):requests.put(('step',actions))
+                    def step_wait(self):
+                        result=responses.get(timeout=300)
+                        if isinstance(result,Exception):raise result
+                        return result
+                    def close(self):pass
+                    def get_attr(self,name,indices=None):
+                        ids=self._get_indices(indices)
+                        if name=='render_mode':return [None for _ in ids]
+                        raise AttributeError(name)
+                    def set_attr(self,name,value,indices=None):raise NotImplementedError(name)
+                    def env_method(self,name,*args,indices=None,**kw):return [False for _ in self._get_indices(indices)]
+                    def env_is_wrapped(self,wrapper_class,indices=None):return [False for _ in self._get_indices(indices)]
+                env=ParallelEnv()
+                model=PPO.load('__PPO_V94_ZIP__',env=env,device='cpu')
+                initial_updates=model._n_updates
+                evaluation_mode[0]=True
+                all_reports=[]
+                for evaluation_round in range(len(scenario_batches)):
+                    evaluation_round_id[0]=evaluation_round
+                    scenarios[:]=[dict(c) for c in scenario_batches[evaluation_round]]
+                    finished[:]=False
+                    obs=env.reset();rows=[[] for _ in range(count)];reports=[None]*count
+                    for step in range(1800):
+                        actions,_=model.predict(obs,deterministic=True)
+                        input_obs=obs.copy()
+                        obs,rewards,dones,infos=env.step(actions)
+                        for k in range(count):
+                            if reports[k] is not None:continue
+                            row={key:value for key,value in infos[k].items() if key!='terminal_observation'}
+                            row.update(observation=input_obs[k].tolist(),step=step+1,policy_action=actions[k].tolist(),reward=float(rewards[k]))
+                            rows[k].append(row)
+                            if dones[k]:
+                                finished[k]=True
+                                rr=rows[k]
+                                reports[k]=dict(task_region_minimum_clearance=min((r['clearance'] for r in rr if r['x']>=2.5),default=None),minimum_box_clearance=min(min(r['box_clearances'].values()) for r in rr),minimum_wall_clearance=min(r['wall_clearance'] for r in rr),case=dict(scenarios[int(env_ids[k])]),round=evaluation_round,result=row['reason'],steps=len(rr),sim_seconds=.1*len(rr),minimum_clearance=min(r['clearance'] for r in rr),contacts=row['contacts'],final_pose=[row['x'],row['y'],row['yaw']],goal_error=math.hypot(row['x']-scenarios[int(env_ids[k])]['goal_x'],row['y']),episode_return=float(row['episode']['r']),projection_p95_seconds=float(np.percentile([(r.get('projection') or {}).get('selection_seconds',0.) for r in rr],95)),projection_max_seconds=max((r.get('projection') or {}).get('selection_seconds',0.) for r in rr),route_choices=rows[k][-1].get('route_choice_history',[]),observed_peak_v=max(r['v_meas'] for r in rr),observed_p95_v=float(np.percentile([r['v_meas'] for r in rr],95)),projection_interventions=sum(bool((r.get('projection') or {}).get('intervened')) for r in rr),stop_frames=sum(abs(r['command'][0])<1e-8 for r in rr))
+                                case=scenarios[int(env_ids[k])];boxes=[[case['x'],case['y'],case['depth'],case['width']]]+[q for q in [case['second'],case['third']] if q is not None]
+                                passing=[]
+                                for bx,by,bdepth,bwidth in boxes:
+                                    sample=min(rr,key=lambda r:abs(r['x']-bx))
+                                    passing.append(dict(box=[bx,by,bdepth,bwidth],nearest_x_error=abs(sample['x']-bx),y=sample['y'],side=(1 if sample['y']>by else -1) if abs(sample['x']-bx)<.15 else None))
+                                sides=[q['side'] for q in passing]
+                                reports[k]['actual_passing_samples']=passing
+                                reports[k]['actual_weave']=bool(len(sides)>1 and all(q is not None for q in sides) and len(set(sides))>1)
+                                log('CASE_COMPLETE',json.dumps(reports[k]))
+                        if step%50==0 or all(r is not None for r in reports):
+                            with open(root+'/status.json','w') as f:json.dump(dict(phase='evaluation',round=evaluation_round,training_steps=model.num_timesteps,decisions=step+1,completed=sum(r is not None for r in reports),total=count,reports=reports),f,indent=2)
+                            with open(root+'/evaluation_trajectories_%d.json'%evaluation_round,'w') as f:json.dump(rows,f)
+                        if all(r is not None for r in reports):break
+                    stopped=env.call('settle')
+                    for k,st in enumerate(stopped):
+                        if reports[k] is None:
+                            reports[k]=dict(case=dict(scenarios[int(env_ids[k])]),round=evaluation_round,result='evaluation_incomplete',contacts=st['contacts'])
+                        report_k=reports[k];report_k['settled']=st
+                        report_k['contacts']=max(report_k['contacts'],st['contacts'])
+                        report_k['goal_error']=math.hypot(st['pose'][0]-scenarios[int(env_ids[k])]['goal_x'],st['pose'][1])
+                        if st['contacts'] or st['clearance']<=0.:report_k['result']='collision'
+                        elif report_k['result']=='goal' and not (report_k['goal_error']<=.1 and abs(st['pose'][2])<=math.radians(10) and abs(st['v_meas'])<=.02 and abs(st['w_meas'])<=.03):report_k['result']='goal_not_settled'
+                    for k,report_k in enumerate(reports):
+                        case=report_k['case'];rr=rows[k];st=report_k['settled'];event=intrusion_events[k]
+                        stopped=abs(st['v_meas'])<=.02 and abs(st['w_meas'])<=.03 and len(rr)>=10 and all(abs(r['command'][0])<1e-6 and abs(r['command'][1])<1e-6 for r in rr[-10:])
+                        min_gap=min((r['clearance'] for r in rr if r['x']>=2.5),default=float('inf'))
+                        event_seen=case['dynamic_mode'] is None or (event is not None and any(r.get('second_box_ray_hits',0)>0 and r['step']>=event['step'] for r in rr))
+                        event_safe=event is None or event['clearance_after_insert']>=.2
+                        safety=report_k['contacts']==0 and min_gap>=.2 and event_safe
+                        inside=max(r['x'] for r in rr)<=case['goal_x']+.1 and all(abs(r['y'])<=1.5 for r in rr)
+                        hold=report_k['result'] in ('no_progress','projection_hold','timeout') and stopped and inside
+                        achieved=report_k['result']=='goal' or (case['expected'] in ('safe_hold','goal_or_safe_hold') and hold)
+                        if case['expected']=='safe_hold':achieved=hold
+                        report_k.update(validation_passed=bool(achieved and safety and event_seen),expected=case['expected'],stable_hold=bool(hold),dynamic_event_seen=bool(event_seen),insertion_valid=bool(event_safe),raw_result=report_k['result'])
+                    all_reports.extend(reports)
+                    with open(root+'/evaluation.json','w') as f:json.dump(dict(reports=all_reports,completed=len(all_reports),planned=count*len(scenario_batches),successes=sum(r['result']=='goal' for r in all_reports),validated=sum(bool(r.get('validation_passed')) for r in all_reports),model='__PPO_V94_ZIP__',robot_publish_enabled=False,limit='screening result, not a hardware speed or universal spacing limit'),f,indent=2)
+                with open(root+'/status.json','w') as f:json.dump(dict(phase='completed',training_steps=0,gradient_updates=model._n_updates-initial_updates,evaluation_cases=len(all_reports),successes=sum(r['result']=='goal' for r in all_reports),validated=sum(bool(r.get('validation_passed')) for r in all_reports),model='__PPO_V94_ZIP__',robot_publish_enabled=False),f,indent=2)
+                import hashlib
+                with open(root+'/model.sha256','w') as f:f.write(hashlib.sha256(open('__PPO_V94_ZIP__','rb').read()).hexdigest())
+                from domain_box_report_v94 import write_report
+                write_report(root)
+                log('V94_DOMAIN_TRAINING_AND_EVALUATION_COMPLETE',root)
+                env.call('brake')
+            except Exception:
+                with open(root+'/status.json','w') as f:json.dump({'phase':'failed','error':traceback.format_exc()},f)
+                log('WORKER FATAL',traceback.format_exc())
+                with open(root+'/failure.txt','w') as f:f.write(traceback.format_exc())
+                requests.put(('stop',None))
+        # Per-environment state and independent physical resets.
+        original_p,original_q=robots.get_world_poses();original_p=np.asarray(original_p).copy();original_q=np.asarray(original_q).copy()
+        original_p[:,0]+=1.6199712536517838
+        with open('__PROJECT_ROOT__/scripts/v37_lidar/diagnostics_v4/v95_paired_cases.json') as stream:scenario_batches=json.load(stream)
+        scenarios=[dict(c) for c in scenario_batches[0]]
+        reset_rngs=[np.random.RandomState(20261105+int(e)) for e in env_ids]
+        scan_rngs=[np.random.RandomState(20261205+scenarios[int(e)]['source_case_index']) for e in env_ids]
+        raw_rngs=[np.random.RandomState(20261305+scenarios[int(e)]['source_case_index']) for e in env_ids]
+        scene_boxes=[[] for _ in range(count)]
+        curriculum_steps=[0];evaluation_round_id=[0]
+        config.update(total_training_steps=262144,algorithm='PPO V92 short fine-tune from V89 with scan-based S/outer route choice',training_objective='single-box learned residual speed choice and complete three-static-box route',n_envs=count,speed_caps_m_s=[.2,.3,.4,.5,.6,.7,.8],goal=[15.2,0.,0.],model_initial='__PROJECT_ROOT__/logs/train_speed_three_boxes_v87_20261105_172047/ppo_v87_final.zip',training_wall_budget_seconds=28800,evaluation_rounds=1,real_robot_publish_enabled=False)
+        config['scenarios']=scenarios
+        config['training_objective']='scan-based feasible S or outer-route selection with PPO residual tracking; no box truth in planner or observations'
+        config['controller']='observed_route_planner_v92 + route_reference_v92 + unchanged V90 action projection'
+        config['evaluation_scope']='16 frozen independent full-route episodes after short training; identical geometry, independent sensor seeds; record actual passing sides as well as selected hypotheses'
+        config['model_initial']='__PROJECT_ROOT__/logs/train_static_short_v89_20261106_093540/ppo_v89_final.zip'
+        config['scenario_batches']=scenario_batches
+        config['domain_randomization']={'box_x_m':[-.05,.05],'box_y_m':[-.015,.015],'box_width_m':[-.025,.025],'reset_y_m':[-.025,.025],'reset_yaw_deg':[-2.,2.],'scan_sigma_m':.002,'ray_dropout':.02,'calibration':'stress assumptions, not measured distributions'}
+        config['geometry']={'box_m':[.3,.6,.58],'corridor_width_m':3.3,'gap_definition':'front/back outside faces, not centers','staggered_box_y_m':[-.15,.15,-.15]}
+        config['action_mapping']={'unchanged_residual':'v=clip(v_ref+.4*a_v), w=clip(w_ref+.2*a_w)','moving_v_ref':'PPO bypass reference=max(0,speed_cap-.4), zero for caps<=.4; other phases retain original reference','learned_speed':'policy can brake to zero or choose speed up to the episode ceiling; reference and projector remain active','path_speed_candidate_m_s':1.,'deployment':'unchanged residual mapping; high-speed reference bias at caps>.4 is simulation candidate and must be matched on real adapter'}
+        config['reward']='Euclidean remaining-distance progress8, collision-150, settled goal120, time cost, 25cm and35cm clearance costs, action smoothness; physical clearance/contact covers every box; no first-box completion termination'
+        config['curriculum']={'full_difficulty_after_transitions':0,'speed_ceiling':'full case speed from start','three_box_gap':'full case gap from start','full_route_resets':True}
+        config['domain_randomization']={'reset_y_m':[-.04,.04],'reset_yaw_deg':[-3.,3.],'box_x_m':[-.05,.05],'width_m':[-.025,.025],'scan_sigma_m':.002,'ray_dropout':.02,'calibration':'existing stress assumptions, not measured distributions'}
+        config['evaluation_scope']='32 frozen-model episodes in two 16-env batches; original regression, tight spacing, lateral offsets, near goals, sudden blockage; no robot changes'
+        config['scenario_batches']=scenario_batches
+        config['validation_rule']='goal, or declared no-route case with stable zero command and zero contact; minimum target-region clearance 0.20m; report raw failure separately'
+        config['controller']='unchanged V90 fine angular grid, V88 route; no new fallback or reward changes'
+        config['timing_scope']='selection function only on simulation server; not proof of real full control-loop latency'
+        config['expected_model_sha256']='541c2c8af2ae83626b65f84e9906d73872d197fd34363c6f21a0d2b88180b5f5'
+        config['controller']='observed_route_planner_v92 + route_reference_v92 + V90 projection'
+        config['evaluation_scope']='16 frozen independent full-route episodes; actual passing sides recorded, not just planned labels'
+        config['speed_caps_m_s']=[.2]
+        config['domain_randomization']={'box_x_m':[-.05,.05],'box_y_m':[-.015,.015],'box_width_m':[-.025,.025],'reset_y_m':[-.025,.025],'reset_yaw_deg':[-2.,2.],'scan_sigma_m':.002,'ray_dropout':.02}
+        config['route_choice_method']='finite scan-visible S/outer hypotheses; unknown-space rejection; verified prefixes replanned as new space becomes visible; not a complete geometric feasibility solver'
+        config['action_mapping']['learned_speed']='PPO residual forward speed within 0.2m/s and scan-derived curvature ceiling; original residual mapping unchanged'
+        config['model_initial']='__PPO_V92_ZIP__'
+        config['controller']='V93 prefix-end timing and projected-forward-hold replanning; V93 planner with 0.24m route margin and unchanged V90 projection'
+        config['algorithm']='PPO V93 short continuation from V92 after 384-step frozen-model regression gate'
+        config['preflight_steps']=64
+        config['long_training']={'transitions':262144,'wall_budget_seconds':28800,'n_envs':16,'training_boxes_per_env':[1,1]+[2]*6+[3]*8,'box_depth_m':[.2,.6],'box_width_m':[.35,.75],'box_height_m':[.4,.85],'first_box_x_m':[4.2,5.4],'families':['aligned','staggered','wide_S'],'face_gap_m':{'aligned':[.6,2.5],'staggered':[1.5,3.],'wide_S':[2.3,3.5]},'reset_y_m':[-.08,.08],'reset_yaw_deg':[-5.,5.],'scan_sigma_m':[.001,.004],'scan_dropout':[0.,.04],'corridor_width_m':3.3,'speed_cap_m_s':.2,'randomization_status':'design stress ranges; not measured real-world distributions'}
+        config['controller']='V93 short-prefix and projected-stop fixes,24cm preferred/21cm minimum route margin,V90 action projection'
+        config['evaluation_scope']='64 frozen independent full-route cases:16 original regression,16 heldout random,32 spacing probes;failed spacing is not proof of geometric impossibility'
+        config['algorithm']='PPO V94 domain-randomized continuation from frozen V92'
+        config['domain_randomization']=config['long_training']
+        config['reward_unchanged']=True
+        config['total_training_steps']=0
+        config['algorithm']='Frozen V94 paired route-controller comparison, no PPO updates'
+        config['model_initial']='__PPO_V94_ZIP__'
+        config['evaluation_scope']='8 scenes x 2 controller arms;identical cases and sensor seeds;V94 policy frozen;reward unchanged'
+        config.pop('long_training',None)
+        config.pop('expected_model_sha256',None)
+        with open(root+'/config.json','w') as f:json.dump(config,f,indent=2)
+        finished=np.zeros(count,bool)
+        evaluation_mode=[False]
+        reset_counts=np.ones(count,int)
+        stage_names=['full']*count
+        stage_counts={'full':{},'tail':{}}
+        original_j=np.asarray(robots.get_joint_positions()).copy()
+        route_references=[RouteReference([[0.,0.],[15.2,0.]]) for _ in range(count)]
+        reference_memory=np.stack([r.memory for r in route_references])
+        for k,r in enumerate(route_references):r.memory=reference_memory[k]
+        bridges=[PolicyFrame() for _ in range(count)]
+        action_filters=[AngularActionFilter() for _ in range(count)]
+        references_last=[(0.,0.)]*count;reward_states=[RewardState() for _ in range(count)]
+        commands=np.zeros((count,2));prev_actions=np.zeros((count,2));previous=np.zeros((count,5))
+        minimum_box_gaps=np.full(count,np.inf);minimum_wall_gaps=np.full(count,np.inf)
+        steps=np.zeros(count,int);returns=np.zeros(count);episode_counts={};latched=[[] for _ in range(count)]
+        contacts_log=[];scans_last=[None]*count;histories=[[] for _ in range(count)]
+        scan_memories=[ScanObstacleMemory() for _ in range(count)]
+        speed_caps=np.full(count,.2)
+        remembered_points=[np.empty((0,2)) for _ in range(count)]
+        raw_scans_last=[None]*count
+        intrusion_events=[None]*count
+        second_box_ray_hits=np.zeros(count,int)
+        projection_inputs=[None]*count
+        last_observations=np.zeros((count,164),np.float32)
+        reverse={int(e):i for i,e in enumerate(env_ids)}
+        from omni.physx.bindings._physx import ContactEventType
+        import re
+        def on_real_contact(headers,data):
+            for h in headers:
+                if h.type==ContactEventType.CONTACT_LOST:continue
+                a=str(PhysicsSchemaTools.intToSdfPath(h.actor0));b=str(PhysicsSchemaTools.intToSdfPath(h.actor1))
+                if '/Scene/' not in a and '/Scene/' not in b:continue
+                ia=re.search('/env_(\d+)/',a);ib=re.search('/env_(\d+)/',b)
+                if ia and ib:
+                    assert ia.group(1)==ib.group(1),'cross-environment collision'
+                    k=reverse[int(ia.group(1))];latched[k].append((a,b))
+        contact_subscription=omni.physx.get_physx_simulation_interface().subscribe_contact_report_events(on_real_contact)
+        def reset_ids(ids):
+            ids=np.asarray(ids,int)
+            reset_p=original_p[ids].copy();reset_q=original_q[ids].copy()
+            selected=[]
+            for j,k in enumerate(ids):
+                use_tail=False
+                stage_names[k]='tail' if use_tail else 'full'
+                case=scenarios[int(env_ids[k])]
+                fraction=1.
+                reset_p[j,1]=origins[env_ids[k],1]+case['start_y']
+                cap=min(case['target_speed_cap'],.2+.6*fraction)
+                gap=None if case['group']=='single_speed' else max(case['target_gap'],3.*(1.-fraction))
+                scan_rngs[k]=np.random.RandomState(case['seed']+(200000 if evaluation_mode[0] else int(reset_counts[k])*101))
+                raw_rngs[k]=np.random.RandomState(case['seed']+1000+(200000 if evaluation_mode[0] else int(reset_counts[k])*101))
+                intrusion_events[k]=None
+                rng=reset_rngs[k]
+                if evaluation_mode[0]:
+                    layout=case['layout']
+                else:
+                    n_boxes=([1,1]+[2]*6+[3]*8)[int(env_ids[k])]
+                    layout,family=sample_layout(rng,n_boxes)
+                    case['family']=family
+                first=layout[0];first_x=first['x'];width=first['width'];ys=[q['y'] for q in layout]
+                gaps=[layout[i]['x']-layout[i]['depth']/2-layout[i-1]['x']-layout[i-1]['depth']/2 for i in range(1,len(layout))]
+                case.update(x=first_x,y=first['y'],width=width,depth=first['depth'],layout=[dict(q) for q in layout],n_boxes=len(layout),actual_gap=min(gaps) if gaps else None,actual_face_gaps=gaps,actual_speed_cap=.2,scan_sigma_m=float(rng.uniform(.001,.004)) if not evaluation_mode[0] else .002,scan_dropout=float(rng.uniform(0.,.04)) if not evaluation_mode[0] else .02)
+                case['second']=None if len(layout)<2 else [layout[1][q] for q in ['x','y','depth','width']]
+                case['third']=None if len(layout)<3 else [layout[2][q] for q in ['x','y','depth','width']]
+                case['adjacent_box_edge_distances']=[separation(polygon(q['x'],q['y'],q['depth'],q['width'],0.),polygon(r['x'],r['y'],r['depth'],r['width'],0.)) for q,r in zip(layout[:-1],layout[1:])]
+                with open(root+'/episode_layouts.jsonl','a') as stream:stream.write(json.dumps(dict(env_id=int(env_ids[k]),reset=int(reset_counts[k]),evaluation=bool(evaluation_mode[0]),round=evaluation_round_id[0],family=case['family'],layout=layout,face_gaps=gaps,adjacent_edge_distances=case['adjacent_box_edge_distances'],scan_sigma=case['scan_sigma_m'],scan_dropout=case['scan_dropout']))+'\n')
+                local_boxes=[]
+                for value in SCENE_BOXES:
+                    name=value[0];prim=stage.GetPrimAtPath(paths[env_ids[k]]+'/Scene/'+name)
+                    if name in ('MovingObstacle','SecondObstacle','ThirdObstacle'):
+                        data=[first_x,ys[0],first['depth'],width] if name=='MovingObstacle' else case['second' if name=='SecondObstacle' else 'third']
+                        enabled=data is not None
+                        prim.GetAttribute('physics:collisionEnabled').Set(enabled)
+                        prim.GetAttribute('visibility').Set('inherited' if enabled else 'invisible')
+                        if not enabled:continue
+                        bx,by,depth,bw=data
+                        height=layout[{'MovingObstacle':0,'SecondObstacle':1,'ThirdObstacle':2}[name]]['height']
+                        prim.GetAttribute('xformOp:translate').Set(Gf.Vec3d(bx,by,height/2))
+                        prim.GetAttribute('xformOp:scale').Set(Gf.Vec3f(depth,bw,height))
+                        value=(name,bx,by,depth,bw,0.,0.,height)
+                    elif name=='DepartingPedestrian':continue
+                    elif name in ('TrainCorridorLeft','TrainCorridorRight'):
+                        wall_y=(1. if name=='TrainCorridorLeft' else -1.)*(case['corridor_width']/2+.05)
+                        prim.GetAttribute('xformOp:translate').Set(Gf.Vec3d(8.,wall_y,.55));value=(name,8.,wall_y,20.,.1,0.,0.,1.1)
+                    local_boxes.append(value)
+                scene_boxes[k]=local_boxes
+                route_references[k]=(FixedRouteReference if case['arm']=='route_fix' else RouteReference)([[0.,0.],[case['goal_x'],0.]])
+                route_references[k].memory=reference_memory[k]
+                speed_caps[k]=cap
+                heading=0.
+                if use_tail:
+                    case=scenarios[int(env_ids[k])]
+                    longitudinal_offset=.2 if reset_counts[k]%4==1 else -.7
+                    reset_p[j,0]=origins[env_ids[k],0]+case['x']+longitudinal_offset
+                    reset_p[j,1]=origins[env_ids[k],1]+case['y']+(.95 if int(env_ids[k])%2==0 else -.95)
+                px0,py0,heading=case['initial_pose']
+                if not evaluation_mode[0]:
+                    py0+=float(rng.uniform(-.08,.08));heading+=float(rng.uniform(-math.radians(5),math.radians(5)))
+                reset_p[j,0]=origins[env_ids[k],0]+px0
+                reset_p[j,1]=origins[env_ids[k],1]+py0
+                reset_q[j]=[math.cos(heading/2),0.,0.,math.sin(heading/2)]
+                selected.append(heading);reset_counts[k]+=1
+            robots.set_world_poses(positions=reset_p,orientations=reset_q,indices=ids)
+            robots.set_velocities(np.zeros((len(ids),6)),indices=ids)
+            robots.set_joint_positions(original_j[ids],indices=ids)
+            robots.set_joint_velocities(np.zeros_like(original_j[ids]),indices=ids)
+            robots.set_joint_velocity_targets(np.zeros((len(ids),2)),joint_indices=idx,indices=ids)
+            for k in ids:
+                observed_extent=reference_memory[k,0] if stage_names[k]=='tail' else -np.inf
+                minimum_box_gaps[k]=float('inf');minimum_wall_gaps[k]=float('inf')
+                scan_memories[k].reset()
+                reference_memory[k]=[observed_extent,1.,0.];bridges[k].reset();action_filters[k].reset();reward_states[k]=RewardState();commands[k]=0;prev_actions[k]=0;steps[k]=0;returns[k]=0;latched[k].clear();histories[k]=[]
+                j=list(ids).index(k);pp=reset_p[j]-origins[env_ids[k]];previous[k]=[pp[0],pp[1],selected[j],0.,0.]
+            after=np.asarray(robots.get_world_poses()[0])
+            assert np.max(np.linalg.norm(after[ids,:2]-reset_p[:,:2],axis=1))<.005
+        def states():
+            pp,qq=bases.get_world_poses();vv=bases.get_linear_velocities();ww=bases.get_angular_velocities();result=[]
+            for k,(pos,q,v,w) in enumerate(zip(pp,qq,vv,ww)):
+                qw,qx,qy,qz=q;yaw=float(math.atan2(2*(qw*qz+qx*qy),1-2*(qy*qy+qz*qz)))
+                local=np.asarray(pos)-origins[env_ids[k]]
+                result.append((float(local[0]),float(local[1]),yaw,float(math.cos(yaw)*v[0]+math.sin(yaw)*v[1]),float(w[2]),float(np.linalg.norm(v[:2])),float(pos[2])))
+            return result
+        def observe_all(ss,selected=None):
+            output=[]
+            for k,st in enumerate(ss):
+                if selected is not None and k not in selected:
+                    output.append(last_observations[k].copy());continue
+                if finished[k]:
+                    output.append(last_observations[k].copy());continue
+                x,y,yaw,v,w,fullv,bz=st;org=origins[env_ids[k]];world_pose=(x+org[0],y+org[1],yaw);hit_arrays=[];raw_scans=[]
+                second_box_ray_hits[k]=0
+                expected=paths[env_ids[k]]
+                for geo in (FRONT,BACK):
+                    points=[];display=[];raw_ranges=np.full(geo.n_rays,np.nan);second_mask=np.zeros(geo.n_rays,bool)
+                    for j in range(geo.n_rays):
+                        oo,dr=sensor_ray(geo,j,world_pose);oo=(oo[0],oo[1],oo[2]+bz)
+                        h=query.raycast_closest(Gf.Vec3f(*oo),Gf.Vec3f(*dr),geo.range_max)
+                        dist=5.
+                        if h.get('hit',False):
+                            dist=min(5.,float(h['distance']));collider=str(h.get('collision',''))
+                            assert not collider.startswith('/World/envs/') or collider.startswith(expected+'/'),'cross scan'
+                            if not collider.startswith(expected+'/Robot'):
+                                raw_ranges[j]=float(h['distance'])
+                                second_mask[j]=collider.endswith('/Scene/SecondObstacle')
+                                hp=h['position'];points.append(world_point_to_base(world_pose,(float(hp[0]),float(hp[1]))))
+                        if env_ids[k]==0 and j%40==0:
+                            dx,dy=dr[:2];px,py=-dy*.003,dx*.003;ex=oo[0]+dist*dx;ey=oo[1]+dist*dy;zz=oo[2]+.006
+                            display.extend([Gf.Vec3f(oo[0]+px,oo[1]+py,zz),Gf.Vec3f(oo[0]-px,oo[1]-py,zz),Gf.Vec3f(ex-px,ey-py,zz),Gf.Vec3f(ex+px,ey+py,zz)])
+                    good=np.isfinite(raw_ranges)
+                    raw_ranges[good]=np.maximum(.001,raw_ranges[good]+raw_rngs[k].normal(0.,scenarios[int(env_ids[k])]['scan_sigma_m'],int(good.sum())))
+                    raw_ranges[raw_rngs[k].random_sample(geo.n_rays)<scenarios[int(env_ids[k])]['scan_dropout']]=np.nan
+                    second_box_ray_hits[k]+=int(np.sum(second_mask & np.isfinite(raw_ranges)))
+                    raw_scans.append({'origin':[geo.x,geo.y,geo.yaw],'angle_min':geo.angle_min,
+                        'angle_increment':geo.angle_increment,'range_min':geo.range_min,
+                        'range_max':geo.range_max,'ranges':raw_ranges})
+                    hit_arrays.append(np.asarray(points).reshape(-1,2))
+                    if env_ids[k]==0:
+                        mesh=fm if geo is FRONT else bm
+                        mesh.CreateFaceVertexCountsAttr([4]*(len(display)//4));mesh.CreateFaceVertexIndicesAttr(list(range(len(display))));mesh.CreatePointsAttr(Vt.Vec3fArray(display))
+                merged=np.asarray(batch.merge(*hit_arrays),dtype=float)
+                valid=np.flatnonzero(np.isfinite(merged)&(merged>=.05)&(merged<=50.))
+                rng=scan_rngs[k]
+                merged[valid]=np.clip(merged[valid]+rng.normal(0.,scenarios[int(env_ids[k])]['scan_sigma_m'],len(valid)),.05,50.)
+                merged[valid[rng.random_sample(len(valid))<scenarios[int(env_ids[k])]['scan_dropout']]]=51.
+                raw_scans_last[k]=raw_scans
+                scans_last[k]=merged
+                remembered_points[k]=scan_memories[k].update(st,merged,raw_scans)
+                speed_caps[k]=scenarios[int(env_ids[k])]['actual_speed_cap']
+                vr,wr=route_references[k].references(st,merged,speed_limit=speed_caps[k],points_base=remembered_points[k],raw_scans=raw_scans,measured_motion=(v,w))
+                speed_caps[k]=min(speed_caps[k],route_references[k].speed_hint)
+                if route_references[k].memory[1]:vr=max(0.,speed_caps[k]-.4)
+                references_last[k]=(vr,wr)
+                bridges[k].set_side(route_references[k].avoidance_side or 1.)
+                obs=bridges[k].encode(merged,e_y=-y,e_psi=-yaw,kappa=0.,ld=.58,progress=x/scenarios[int(env_ids[k])]['goal_x'],direction=0,
+                    v_ref=vr,w_ref=wr,v_meas=v,w_meas=w,stamp_skew=0.)
+                assert np.isfinite(obs).all();last_observations[k]=obs;output.append(obs)
+            return np.stack(output)
+        threading.Thread(target=worker,daemon=True).start()
+        while True:
+            if requests.empty():await app.next_update_async();continue
+            op,actions=requests.get()
+            try:
+                if op=='settle':
+                    robots.set_joint_velocity_targets(zero,joint_indices=idx)
+                    await physics_steps(30)
+                    stopped=states()
+                    responses.put([{'pose':list(st[:3]),'v_meas':st[5],'w_meas':st[4],
+                        'clearance':clearance(st[:3],scene_boxes[k]),'contacts':len(latched[k]),
+                        'contact_pairs':list(latched[k])} for k,st in enumerate(stopped)])
+                    continue
+                if op in ('stop','brake'):
+                    robots.set_joint_velocity_targets(zero,joint_indices=idx);timeline.pause()
+                    if op=='brake':responses.put(True);continue
+                    break
+                if op=='reset':
+                    reset_ids(range(count));ss=states();responses.put(observe_all(ss));continue
+                assert op=='step'
+                command_references=list(references_last)
+                command_phases=[r.phase for r in route_references]
+                actions=np.asarray(actions).copy()
+                for k in range(count):
+                    if reference_memory[k,1] and not finished[k]:
+                        actions[k]=action_filters[k].apply(bridges[k].physical_action(actions[k]))
+                    else:
+                        actions[k]=0.;action_filters[k].reset()
+                execution_proposals=actions.copy()
+                ss=states();targets=[];projection_records=[None]*count;projection_holds=np.zeros(count,bool)
+                for k,st in enumerate(ss):
+                    case=scenarios[int(env_ids[k])];mode=case['dynamic_mode']
+                    if finished[k] or mode is None or intrusion_events[k] is not None:continue
+                    phase=command_phases[k]
+                    ready=phase=='RETURN_TO_GOAL' and st[0]>=6.2 if mode=='return_box' else phase in ('PPO_AVOID','CLEAR_TAIL') and st[0]>=4.4
+                    if not ready:continue
+                    route=route_references[k];side=route.avoidance_side or (-1. if case['mirror'] else 1.)
+                    bx=st[0]+case['dynamic_distance'];by=route.bypass_lane if route.bypass_lane is not None else st[1];bw=.6
+                    if mode=='return_box':by=st[1]-side*.18
+                    if mode=='corridor_block':by=0.;bw=case['corridor_width']
+                    prim=stage.GetPrimAtPath(paths[env_ids[k]]+'/Scene/SecondObstacle')
+                    prim.GetAttribute('xformOp:translate').Set(Gf.Vec3d(bx,by,.29));prim.GetAttribute('xformOp:scale').Set(Gf.Vec3f(.3,bw,.58))
+                    prim.GetAttribute('physics:collisionEnabled').Set(True);prim.GetAttribute('visibility').Set('inherited')
+                    scene_boxes[k]=[q for q in scene_boxes[k] if q[0]!='SecondObstacle']+[('SecondObstacle',bx,by,.3,bw,0.,0.,.58)]
+                    event=dict(step=int(steps[k])+1,mode=mode,phase=phase,pose=list(st[:3]),box=[bx,by,.3,bw],clearance_after_insert=clearance(st[:3],scene_boxes[k]))
+                    intrusion_events[k]=event;case['inserted_box_event']=event
+                    with open(root+'/insertion_events.jsonl','a') as stream:stream.write(json.dumps(dict(env_id=int(env_ids[k]),round=evaluation_round_id[0],event=event))+'\n')
+
+                for k in range(count):
+                    if finished[k]:
+                        commands[k]=0.;targets.append(np.zeros(2));continue
+                    vr,wr=command_references[k]
+                    if scenarios[int(env_ids[k])]['projection']:
+                        proposed=actions[k].copy();previous_command=commands[k].copy()
+                        projection_inputs[k]=dict(step=int(steps[k])+1,pose_before=list(ss[k][:3]),previous_command=previous_command.tolist(),v_ref=vr,w_ref=wr,proposed_action=proposed.tolist(),scan=scans_last[k],points=remembered_points[k],raw=raw_scans_last[k])
+                        selection_started=time.perf_counter()
+                        actions[k],projection_records[k]=select_action(scans_last[k],proposed,previous_command,vr,wr,1.,speed_caps[k],points_base=remembered_points[k])
+                        projection_records[k]['selection_seconds']=time.perf_counter()-selection_started
+                        if not projection_records[k]['feasible']:
+                            projection_holds[k]=True
+                            commands[k]=0.;targets.append(np.zeros(2))
+                            continue
+                    commands[k],wheels=map_residual(actions[k],commands[k],v_ref=vr,w_ref=wr,path_speed=1.,dt=.1,training_speed_cap=speed_caps[k])
+                    targets.append(wheels);bridges[k].push_action(actions[k])
+                for k in range(count):
+                    case=scenarios[int(env_ids[k])]
+                    if not case['departing_pedestrian']:continue
+                    sign=1. if case['background_y']>0. else -1.
+                    fraction=float(np.clip((steps[k]*.1-10.)/4.,0.,1.))
+                    py=sign*(-.2+1.6*fraction);px=case['x']-1.
+                    stage.GetPrimAtPath(paths[env_ids[k]]+'/Scene/DepartingPedestrian').GetAttribute('xformOp:translate').Set(Gf.Vec3d(px,py,.8))
+                    index=next(i for i,value in enumerate(scene_boxes[k]) if value[0]=='DepartingPedestrian')
+                    scene_boxes[k][index]=('DepartingPedestrian',px,py,.3,.3,0.,0.,1.6)
+                for k in range(count):
+                    if not finished[k]:route_references[k].record_execution(execution_proposals[k],commands[k],projection_records[k],command_references[k][0])
+                robots.set_joint_velocity_targets(np.asarray(targets),joint_indices=idx)
+                before_sim=float(world.current_time)
+                await physics_steps(6)
+                assert abs(float(world.current_time)-before_sim-.1)<5e-5,('physics dt',world.current_time,before_sim)
+                ss=states();obs=observe_all(ss);rewards=[];dones=[];infos=[]
+                for k,st in enumerate(ss):
+                    steps[k]+=1;x,y,yaw,v,w,fullv,bz=st
+                    gap=clearance((x,y,yaw),scene_boxes[k])
+                    box_clearances={box[0]:clearance((x,y,yaw),[box]) for box in scene_boxes[k] if box[0] in ('MovingObstacle','SecondObstacle','ThirdObstacle')}
+                    wall_gap=clearance((x,y,yaw),[box for box in scene_boxes[k] if box[0] in ('TrainCorridorLeft','TrainCorridorRight')])
+                    minimum_box_gaps[k]=min(minimum_box_gaps[k],min(box_clearances.values()))
+                    minimum_wall_gaps[k]=min(minimum_wall_gaps[k],wall_gap)
+                    reward,reason,terms=transition_reward(previous[k],(x,y,yaw,fullv,w),prev_actions[k],actions[k],goal=(scenarios[int(env_ids[k])]['goal_x'],0.,0.),clearance=gap,contact=bool(latched[k]),state=reward_states[k],obstacle=(scenarios[int(env_ids[k])]['x'],scenarios[int(env_ids[k])]['y'],scenarios[int(env_ids[k])]['depth'],scenarios[int(env_ids[k])]['width']),dt=.1,timeout=steps[k]>=(1800 if evaluation_mode[0] else 1400))
+                    if projection_holds[k] and reason=='running':
+                        reason='projection_hold';reward-=50.;terms['projection_hold']=-50.
+                    # Earlier proximity warning: simulator truth for reward only; not policy input.
+                    warning=-6.*.1*max(0.,(.35-gap)/.35)**2
+                    reward+=warning;terms['early_clearance']=warning
+                    if reason=='running' and (abs(y)>1.5 or x<-.5 or x>scenarios[int(env_ids[k])]['goal_x']+.6):reason='out_of_bounds';reward-=100.
+                    if not finished[k] and reason not in ('running','goal') and projection_inputs[k] is not None:
+                        q=projection_inputs[k]
+                        raw=[dict(a,ranges=[float(v) if np.isfinite(v) else None for v in a['ranges']]) for a in q['raw']]
+                        snapshot=dict(planner_status=route_references[k].local_planner.status,planner_candidates=route_references[k].local_planner.candidate_results,env_id=int(env_ids[k]),round=evaluation_round_id[0],case=scenarios[int(env_ids[k])],reason=reason,step=q['step'],pose_before=q['pose_before'],previous_command=q['previous_command'],v_ref=q['v_ref'],w_ref=q['w_ref'],proposed_action=q['proposed_action'],scan=q['scan'].tolist(),points_base=q['points'].tolist(),raw_scans=raw,projection=projection_records[k])
+                        with open(root+'/terminal_projection_inputs.jsonl','a') as stream:stream.write(json.dumps(snapshot)+'\n')
+                    previous[k]=[x,y,yaw,fullv,w];prev_actions[k]=actions[k];returns[k]+=reward
+                    done=reason!='running'
+                    info={'box_clearances':box_clearances,'wall_clearance':wall_gap,'minimum_box_clearance':float(minimum_box_gaps[k]),'minimum_wall_clearance':float(minimum_wall_gaps[k]),'pre_projection_action':execution_proposals[k].tolist(),'blocked_execution_frames':route_references[k].blocked_execution_frames,'last_replan_trigger':route_references[k].last_trigger,'route_events':route_references[k].route_events,'planning_active':route_references[k].planning_pose is not None,'replan_count':route_references[k].replan_count,'planning_slice_seconds':route_references[k].local_planner.last_slice_seconds,'discarded_completed_paths':route_references[k].rejected_completed_paths,'speed_cap_m_s':float(speed_caps[k]),'arm':scenarios[int(env_ids[k])]['arm'],'route_choice':route_references[k].route_choice,'route_choice_history':list(route_references[k].choice_history),'route_speed_hint':route_references[k].speed_hint,'family':scenarios[int(env_ids[k])]['family'],'goal_x':scenarios[int(env_ids[k])]['goal_x'],'intrusion_event':intrusion_events[k],'second_box_ray_hits':int(second_box_ray_hits[k]),'bypass_lane':route_references[k].bypass_lane,'history_points_cleared':scan_memories[k].last_cleared,'entry_lane':route_references[k].entry_lane,'entry_prepared':route_references[k].entry_prepared,'obstacles_tracked':route_references[k].obstacles_tracked,'tracked_interval':route_references[k].obstacle_interval,'reference_phase':command_phases[k],'next_reference_phase':route_references[k].phase,'policy_frame_side':bridges[k].side,'side_clearances':route_references[k].side_clearances,'observed_obstacle_extent':float(reference_memory[k,0]),'reason':reason,'clearance':gap,'x':x,'y':y,'yaw':yaw,'v_ref':command_references[k][0],'actual_gap':scenarios[int(env_ids[k])]['actual_gap'],'training_group':scenarios[int(env_ids[k])]['group'],'command':commands[k].tolist(),'env_id':int(env_ids[k]),'projection':projection_records[k],'contacts':len(latched[k]),'contact_pairs':list(latched[k]),'v_meas':v,'w_meas':w,'w_ref':command_references[k][1],'reward_terms':terms}
+                    if route_references[k].route_events:
+                        with open(root+'/route_events.jsonl','a') as stream:stream.write(json.dumps(dict(env_id=int(env_ids[k]),step=int(steps[k]),evaluation=bool(evaluation_mode[0]),round=evaluation_round_id[0],events=route_references[k].route_events))+'\n')
+                    if evaluation_mode[0] and (gap<.15 or reason in ['collision','projection_hold']):
+                        snapshot={'env_id':int(env_ids[k]),'step':int(steps[k]),'pose':list(map(float,st[:3])),
+                            'reason':reason,'contact_pairs':list(latched[k]),'truth_gap':gap,
+                            'projection':projection_records[k],'scan':scans_last[k].tolist(),
+                            'observed_static_points_base':remembered_points[k].tolist(),'command':commands[k].tolist()}
+                        with open(root+'/safety_snapshots.jsonl','a') as stream:stream.write(json.dumps(snapshot)+'\n')
+                    if env_ids[k]==0:
+                        histories[k].append((x,y));draw_line(trail_mesh,histories[k],width=.012)
+                    if done:
+                        with open(root+'/episode_metrics.jsonl','a') as stream:stream.write(json.dumps(dict(env_id=int(env_ids[k]),evaluation=bool(evaluation_mode[0]),round=evaluation_round_id[0],steps=int(steps[k]),result=reason,contacts=len(latched[k]),minimum_box_clearance=float(minimum_box_gaps[k]),minimum_wall_clearance=float(minimum_wall_gaps[k]),layout=scenarios[int(env_ids[k])]['layout'],face_gaps=scenarios[int(env_ids[k])]['actual_face_gaps'],final_pose=[x,y,yaw]))+'\n')
+                        episode_counts[reason]=episode_counts.get(reason,0)+1
+                        if not evaluation_mode[0]:
+                            stage_results=stage_counts[stage_names[k]];stage_results[reason]=stage_results.get(reason,0)+1
+                        info.update(terminal_observation=obs[k].copy(),TimeLimit_truncated=reason=='timeout',episode={'r':float(returns[k]),'l':int(steps[k])})
+                        info['TimeLimit.truncated']=reason=='timeout'
+                    rewards.append(reward);dones.append(done);infos.append(info)
+                ids=np.flatnonzero(dones)
+                if len(ids) and not evaluation_mode[0]:
+                    reset_ids(ids);fresh=observe_all(states(),ids);obs[ids]=fresh[ids]
+                responses.put((obs,np.asarray(rewards,np.float32),np.asarray(dones,bool),infos))
+            except Exception as e:
+                robots.set_joint_velocity_targets(zero,joint_indices=idx);timeline.pause();responses.put(e);raise
+        log('PARALLEL_STOPPED')
+    except Exception:
+        log('FATAL',traceback.format_exc())
+        with open(root+'/failure.txt','w') as f:f.write(traceback.format_exc())
+asyncio.ensure_future(main())

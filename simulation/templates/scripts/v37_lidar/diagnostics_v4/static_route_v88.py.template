@@ -1,0 +1,166 @@
+"""V88 simulation candidate: group nearby observed route blockers, balance passing room, curve back to the route."""
+import math
+import numpy as np
+from path_features_v10 import ForwardPath
+
+
+class RouteReference(object):
+    def __init__(self, points):
+        self.path = ForwardPath(points)
+        self.origin = self.path.points[0]
+        vector = self.path.points[-1] - self.origin
+        self.length = float(np.linalg.norm(vector))
+        if self.length <= 0.:
+            raise ValueError('straight route needs distinct endpoints')
+        self.tangent = vector / self.length
+        self.normal = np.array([-self.tangent[1], self.tangent[0]])
+        local = self.path.points - self.origin
+        along = np.dot(local, self.tangent)
+        # Interpolation can repeat the endpoint with roundoff below one nanometre.
+        if np.max(np.abs(np.dot(local, self.normal))) > .02 or np.any(np.diff(along) < -1e-9):
+            raise ValueError('current full-route controller requires a forward straight task path')
+        self.heading = math.atan2(self.tangent[1], self.tangent[0])
+        self.memory = np.array([-np.inf, 1., 0.])
+        self.obstacle_interval = None
+        self.cleared = False
+        self.phase = 'WAIT_OBSERVATION'
+        self.avoidance_side = None
+        self.side_clearances = None
+        self.obstacles_tracked = 0
+        self.bypass_lane = None
+        self.entry_lane = None
+        self.entry_prepared = False
+
+    def references(self, pose, merged, speed_limit=.1, points_base=None):
+        offset = np.asarray(pose[:2]) - self.origin
+        relative_yaw = pose[2] - self.heading
+        local_pose = (float(np.dot(offset, self.tangent)), float(np.dot(offset, self.normal)),
+                      math.atan2(math.sin(relative_yaw), math.cos(relative_yaw)))
+        x,y,yaw = local_pose
+        if not np.isfinite(self.memory[0]):
+            self.obstacle_interval = None
+            self.cleared = False
+            self.avoidance_side = None
+            self.side_clearances = None
+            self.obstacles_tracked = 0
+            self.bypass_lane = None
+            self.entry_lane = None
+            self.entry_prepared = False
+        angles = -3.14 + np.arange(1083)*.0058
+        ranges = np.asarray(merged)
+        valid = np.isfinite(ranges) & (ranges >= .05) & (ranges <= 50.)
+        wx = x + ranges[valid]*np.cos(angles[valid]+yaw)
+        wy = y + ranges[valid]*np.sin(angles[valid]+yaw)
+        if self.cleared and points_base is not None and len(points_base):
+            c,s=math.cos(yaw),math.sin(yaw)
+            wx=np.concatenate((wx,x+c*points_base[:,0]-s*points_base[:,1]))
+            wy=np.concatenate((wy,y+s*points_base[:,0]+c*points_base[:,1]))
+        # Half body width .3515m plus the existing .06m scan rollout margin.
+        candidates = np.sort(wx[(np.abs(wy) <= .4115) & (wx <= self.length)])
+        if self.cleared:
+            ahead=candidates[candidates>=max(x+.5,self.memory[0]+.25)]
+            if ahead.size:
+                self.obstacle_interval=None
+                self.cleared=False
+                self.bypass_lane=None
+                self.entry_lane=None
+                self.entry_prepared=False
+                # Keep the passing side while still outside the route corridor.
+                if abs(y)<=.4115:
+                    self.avoidance_side=None
+                    self.side_clearances=None
+                self.memory[2]=0.
+        if not self.cleared:
+            if self.obstacle_interval is None:
+                ahead = candidates[candidates >= x+.5]
+                if ahead.size:
+                    # Keep nearby observed route blockers in one bypass instead of returning between boxes.
+                    breaks = np.flatnonzero(np.diff(ahead) > 3.5)
+                    stop = int(breaks[0]+1) if breaks.size else len(ahead)
+                    self.obstacle_interval = [float(ahead[0]), float(ahead[stop-1])]
+                    self.obstacles_tracked += 1
+            else:
+                lo,hi = self.obstacle_interval
+                associated = candidates[(candidates >= lo-3.5) & (candidates <= hi+3.5)]
+                if associated.size:
+                    self.obstacle_interval = [min(lo,float(associated[0])),max(hi,float(associated[-1]))]
+            if self.obstacle_interval is not None and self.avoidance_side is None:
+                lo,hi=self.obstacle_interval
+                ahead=(wx>=lo-.5)&(wx<=min(self.length,hi+1.5))
+                lateral=wy[ahead]
+                # Compare the lateral room of the two bypass bands using observed surfaces.
+                self.side_clearances=[float(np.min(np.abs(lateral-side*.9))-.3515) for side in [1.,-1.]]
+                self.avoidance_side=1. if self.side_clearances[0]>=self.side_clearances[1] else -1.
+            if self.obstacle_interval is not None:
+                lo,hi=self.obstacle_interval
+                side=self.avoidance_side
+                surface=(wx>=lo-.1)&(wx<=hi+.1)&(np.abs(wy)<=1.)
+                if surface.any():
+                    # Keep observed passing-edge clearance before the box becomes side-occluded.
+                    edge=float(np.max(side*wy[surface]))
+                    lane_distance=edge+.3515+.30
+                    walls=(wx>=lo-.5)&(wx<=hi+.5)&(side*wy>edge+1.103)
+                    if walls.any():
+                        lane_distance=min(lane_distance,.5*(edge+float(np.min(side*wy[walls]))))
+                    lane=side*lane_distance
+                    if self.bypass_lane is None or side*lane>side*self.bypass_lane:
+                        self.bypass_lane=lane
+            if self.obstacle_interval is not None:
+                self.memory[0] = self.obstacle_interval[1]
+                self.cleared = x-math.hypot(.5,.3515) > self.memory[0]+.1
+        if self.obstacle_interval is not None and not self.cleared and x > self.memory[0]+.1:
+            # The center passed, but the rear can still hit during an early return turn.
+            self.phase = 'CLEAR_TAIL'
+            self.memory[1] = 0.
+            error = math.atan2(math.sin(-yaw),math.cos(-yaw))
+            return (0. if abs(error)>.35 else min(.4,speed_limit)),float(np.clip(1.2*error,-.2,.2))
+        self.phase = 'PPO_AVOID' if self.obstacle_interval is not None and not self.cleared else 'RETURN_TO_GOAL'
+        self.memory[1] = float(self.obstacle_interval is not None and not self.cleared)
+        if self.memory[1]:
+            self.memory[2] = 0.
+            if self.obstacles_tracked>1 and not self.entry_prepared:
+                side=self.avoidance_side
+                if self.entry_lane is None:
+                    lo,hi=self.obstacle_interval
+                    surface=(wx>=lo-.1)&(wx<=hi+.1)&(np.abs(wy)<=1.)
+                    if surface.any():
+                        # Observed passing edge plus half body width and 12cm entry room.
+                        self.entry_lane=side*(float(np.max(side*wy[surface]))+.3515+.12)
+                if self.entry_lane is not None:
+                    self.entry_prepared=side*(y-self.entry_lane)>=-.02
+                    if not self.entry_prepared:
+                        error=math.atan2(math.sin(math.atan2(self.entry_lane-y,.3)-yaw),
+                                         math.cos(math.atan2(self.entry_lane-y,.3)-yaw))
+                        self.phase='PREPARE_NEXT_BYPASS'
+                        self.memory[1]=0.
+                        return (0. if abs(error)>.35 else min(.05,speed_limit)),float(np.clip(1.2*error,-.2,.2))
+            if self.bypass_lane is not None:
+                error=math.atan2(math.sin(math.atan2(self.bypass_lane-y,.58)-yaw),
+                                 math.cos(math.atan2(self.bypass_lane-y,.58)-yaw))
+                return 0.,float(np.clip(1.2*error,-.2,.2))
+            return 0.,0.
+        return _return_to_goal(local_pose, self.memory, self.length, speed_limit)
+
+
+META = {'inputs': ['fixed actual task path in map', 'pose_map', 'merged_scan'],
+        'scope': 'successive observed static obstacles on a forward straight path; each reacquired after previous tail clears',
+        'association_gap_m': 3.5, 'front_extent_m': .5, 'front_extent_evidence': 'approximate user axle-to-front measurement',
+        'lookahead': .58, 'body_m': [.95, .703]}
+
+
+
+def _return_to_goal(pose, memory, end, speed_limit):
+    x,y,yaw = pose
+    distance = math.hypot(end-x,y)
+    if distance > .1:
+        memory[2] = 0.
+    elif distance <= .08:
+        memory[2] = 1.
+    if memory[2]:
+        error = math.atan2(math.sin(-yaw),math.cos(-yaw))
+        return 0.,float(np.clip(.8*error,-.2,.2)) if abs(error)>.06 else 0.
+    error = math.atan2(math.sin(math.atan2(-y,min(.58,end-x))-yaw),
+                       math.cos(math.atan2(-y,min(.58,end-x))-yaw))
+    if abs(error) > 1.4:
+        return 0.,float(np.clip(1.2*error,-.2,.2))
+    return min(.4,speed_limit,max(.05,distance-.07)),float(np.clip(1.2*error,-.2,.2))
